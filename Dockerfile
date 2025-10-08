@@ -1,0 +1,46 @@
+# Gnosis-Crawl Dockerfile
+# Use official Playwright Python image like gnosis-wraith
+
+FROM mcr.microsoft.com/playwright/python:v1.54.0-jammy
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
+
+# Install additional dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd --create-home --shell /bin/bash app
+
+# Set working directory
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Browsers are already installed in the base image
+
+# Copy application code
+COPY app/ ./app/
+
+# Create storage directory
+RUN mkdir -p storage && chown -R app:app storage
+
+# Switch to non-root user
+USER app
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Run application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

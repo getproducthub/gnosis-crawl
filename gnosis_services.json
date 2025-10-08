@@ -1,0 +1,40 @@
+{
+  "development": {
+    "gnosis-ahp": {
+      "url": "http://localhost:6793",
+      "description": "Authentication and HTTP Proxy service"
+    },
+    "gnosis-crawl": {
+      "url": "http://localhost:6792", 
+      "description": "Web crawling and markdown generation service"
+    },
+    "gnosis-ocr": {
+      "url": "http://localhost:6794",
+      "description": "OCR and document processing service"
+    }
+  },
+  "production": {
+    "gnosis-ahp": {
+      "url": "${GNOSIS_AHP_URL}",
+      "description": "Authentication and HTTP Proxy service"
+    },
+    "gnosis-crawl": {
+      "url": "${GNOSIS_CRAWL_URL}",
+      "description": "Web crawling and markdown generation service" 
+    },
+    "gnosis-ocr": {
+      "url": "${GNOSIS_OCR_URL}",
+      "description": "OCR and document processing service"
+    }
+  },
+  "test": {
+    "gnosis-ahp": {
+      "url": "http://localhost:6793",
+      "description": "Authentication and HTTP Proxy service for testing"
+    },
+    "gnosis-crawl": {
+      "url": "http://localhost:6792",
+      "description": "Web crawling service for testing"
+    }
+  }
+}

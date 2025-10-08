@@ -1,0 +1,271 @@
+"""
+Storage service for gnosis-crawl
+Based on gnosis-ocr storage service with crawl-specific adaptations
+"""
+import os
+import json
+import hashlib
+import logging
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Union
+from datetime import datetime
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+# Try to import GCS for cloud mode
+try:
+    from google.cloud import storage as gcs
+    from google.cloud.exceptions import NotFound
+    GCS_AVAILABLE = True
+except ImportError:
+    GCS_AVAILABLE = False
+    logger.warning("Google Cloud Storage not available - local mode only")
+
+
+class CrawlStorageService:
+    """Storage service for crawl results with user partitioning"""
+    
+    def __init__(self, user_email: Optional[str] = None):
+        """
+        Initialize storage service with user context
+        
+        Args:
+            user_email: User email for partitioning (defaults to anonymous)
+        """
+        self._user_email = user_email or "anonymous@gnosis-crawl.local"
+        self._user_hash = self._compute_user_hash(self._user_email)
+        self._is_cloud = settings.is_cloud_environment()
+        
+        # Initialize storage backend
+        if self._is_cloud:
+            if not GCS_AVAILABLE:
+                raise RuntimeError("Google Cloud Storage client not installed")
+            self._init_gcs()
+        else:
+            self._init_local()
+            
+        logger.info(f"CrawlStorageService initialized - Cloud: {self._is_cloud}, User: {self._user_hash}")
+    
+    def _compute_user_hash(self, email: str) -> str:
+        """Compute 12-char hash for user bucketing"""
+        return hashlib.sha256(email.encode()).hexdigest()[:12]
+    
+    def _init_gcs(self):
+        """Initialize Google Cloud Storage client"""
+        from google.cloud import storage as gcs_module
+        self._gcs_client = gcs_module.Client()
+        self._bucket = self._gcs_client.bucket(settings.gcs_bucket_name)
+        logger.info(f"GCS client initialized for bucket: {settings.gcs_bucket_name}")
+    
+    def _init_local(self):
+        """Initialize local filesystem storage"""
+        self._storage_root = Path(settings.storage_path)
+        self._ensure_local_dirs()
+        logger.info(f"Local storage initialized at {self._storage_root}")
+    
+    def _ensure_local_dirs(self):
+        """Ensure required local directories exist"""
+        base_dirs = [
+            self._storage_root,
+            self._storage_root / self._user_hash,
+        ]
+        
+        for directory in base_dirs:
+            directory.mkdir(parents=True, exist_ok=True)
+    
+    def _get_file_path(self, filename: str, session_id: str) -> str:
+        """Get the full path for a file with user and session partitioning"""
+        return f"{self._user_hash}/{session_id}/{filename}"
+    
+    def get_session_path(self, session_id: str) -> Path:
+        """Get the full local path for a session (local mode only)"""
+        if self._is_cloud:
+            raise RuntimeError("Session paths not available in cloud mode")
+        return self._storage_root / self._user_hash / session_id
+    
+    async def save_crawl_result(self, result: Dict[str, Any], url: str, session_id: str) -> str:
+        """
+        Save a crawl result for a URL
+        
+        Args:
+            result: Crawl result dictionary
+            url: Original URL crawled
+            session_id: Session identifier
+            
+        Returns:
+            Filename of saved result
+        """
+        # Create URL-based filename
+        url_hash = hashlib.sha256(url.encode()).hexdigest()[:12]
+        filename = f"results/{url_hash}.json"
+        
+        # Add metadata
+        result_data = {
+            "url": url,
+            "result": result,
+            "session_id": session_id,
+            "user_hash": self._user_hash,
+            "saved_at": datetime.utcnow().isoformat(),
+        }
+        
+        # Save to storage
+        await self.save_file(json.dumps(result_data, indent=2), filename, session_id)
+        return filename
+    
+    async def get_crawl_result(self, url: str, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get crawl result for a specific URL
+        
+        Args:
+            url: Original URL
+            session_id: Session identifier
+            
+        Returns:
+            Crawl result dictionary or None if not found
+        """
+        url_hash = hashlib.sha256(url.encode()).hexdigest()[:12]
+        filename = f"results/{url_hash}.json"
+        
+        try:
+            data = await self.get_file(filename, session_id)
+            return json.loads(data.decode('utf-8'))
+        except FileNotFoundError:
+            return None
+    
+    async def list_session_results(self, session_id: str) -> List[Dict[str, Any]]:
+        """
+        List all crawl results for a session
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            List of crawl result dictionaries
+        """
+        results = []
+        try:
+            files = await self.list_files("results", session_id)
+            
+            for file_info in files:
+                if file_info.get('name', '').endswith('.json'):
+                    try:
+                        data = await self.get_file(f"results/{file_info['name']}", session_id)
+                        result = json.loads(data.decode('utf-8'))
+                        results.append(result)
+                    except Exception as e:
+                        logger.warning(f"Failed to load result file {file_info['name']}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to list session results: {e}")
+            
+        return results
+    
+    async def save_session_metadata(self, metadata: Dict[str, Any], session_id: str):
+        """Save metadata for a session"""
+        filename = "metadata.json"
+        await self.save_file(json.dumps(metadata, indent=2), filename, session_id)
+    
+    async def get_session_metadata(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get metadata for a session"""
+        try:
+            data = await self.get_file("metadata.json", session_id)
+            return json.loads(data.decode('utf-8'))
+        except FileNotFoundError:
+            return None
+    
+    async def save_file(self, content: Union[str, bytes], filename: str, session_id: str):
+        """Save file to storage"""
+        file_path = self._get_file_path(filename, session_id)
+        
+        if isinstance(content, str):
+            content = content.encode('utf-8')
+        
+        if self._is_cloud:
+            await self._save_gcs_file(file_path, content)
+        else:
+            await self._save_local_file(file_path, content)
+    
+    async def get_file(self, filename: str, session_id: str) -> bytes:
+        """Get file from storage"""
+        file_path = self._get_file_path(filename, session_id)
+        
+        if self._is_cloud:
+            return await self._get_gcs_file(file_path)
+        else:
+            return await self._get_local_file(file_path)
+    
+    async def list_files(self, prefix: str, session_id: str) -> List[Dict[str, Any]]:
+        """List files with prefix"""
+        prefix_path = self._get_file_path(prefix, session_id)
+        
+        if self._is_cloud:
+            return await self._list_gcs_files(prefix_path)
+        else:
+            return await self._list_local_files(prefix_path)
+    
+    # Local filesystem operations
+    async def _save_local_file(self, file_path: str, content: bytes):
+        """Save file to local filesystem"""
+        full_path = self._storage_root / file_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(full_path, 'wb') as f:
+            f.write(content)
+    
+    async def _get_local_file(self, file_path: str) -> bytes:
+        """Get file from local filesystem"""
+        full_path = self._storage_root / file_path
+        
+        if not full_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
+        with open(full_path, 'rb') as f:
+            return f.read()
+    
+    async def _list_local_files(self, prefix_path: str) -> List[Dict[str, Any]]:
+        """List local files with prefix"""
+        full_prefix = self._storage_root / prefix_path
+        files = []
+        
+        if full_prefix.is_dir():
+            for file_path in full_prefix.iterdir():
+                if file_path.is_file():
+                    files.append({
+                        'name': file_path.name,
+                        'path': str(file_path.relative_to(self._storage_root)),
+                        'size': file_path.stat().st_size,
+                        'modified': datetime.fromtimestamp(file_path.stat().st_mtime)
+                    })
+        
+        return files
+    
+    # Google Cloud Storage operations
+    async def _save_gcs_file(self, file_path: str, content: bytes):
+        """Save file to Google Cloud Storage"""
+        blob = self._bucket.blob(file_path)
+        blob.upload_from_string(content)
+    
+    async def _get_gcs_file(self, file_path: str) -> bytes:
+        """Get file from Google Cloud Storage"""
+        try:
+            blob = self._bucket.blob(file_path)
+            return blob.download_as_bytes()
+        except NotFound:
+            raise FileNotFoundError(f"File not found: {file_path}")
+    
+    async def _list_gcs_files(self, prefix_path: str) -> List[Dict[str, Any]]:
+        """List GCS files with prefix"""
+        blobs = self._bucket.list_blobs(prefix=prefix_path)
+        files = []
+        
+        for blob in blobs:
+            if not blob.name.endswith('/'):  # Skip directories
+                files.append({
+                    'name': Path(blob.name).name,
+                    'path': blob.name,
+                    'size': blob.size or 0,
+                    'modified': blob.updated or blob.time_created
+                })
+        
+        return files

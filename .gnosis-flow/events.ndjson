@@ -1,0 +1,272 @@
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test.md", "kind": "created", "ts": 1755786452.290007}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test.md", "kind": "deleted", "ts": 1755786458.3589954}
+{"type": "dir_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app", "kind": "dir_created", "ts": 1755789725.2433357}
+{"type": "dir_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\storage", "kind": "dir_created", "ts": 1755789725.2433357}
+{"type": "dir_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests", "kind": "dir_created", "ts": 1755789725.2433357}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\__init__.py", "kind": "created", "ts": 1755789732.3113997}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\config.py", "kind": "created", "ts": 1755789745.4805183}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "kind": "created", "ts": 1755789757.6180055}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\models.py", "kind": "created", "ts": 1755789772.8640883}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "kind": "created", "ts": 1755789791.1876478}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\storage.py", "kind": "created", "ts": 1755789826.6521409}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "kind": "created", "ts": 1755789850.9860144}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\requirements.txt", "kind": "created", "ts": 1755789861.2139707}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\.env.example", "kind": "created", "ts": 1755789871.4897285}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\.env", "kind": "created", "ts": 1755789877.7279513}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\deploy.ps1", "kind": "created", "ts": 1755789904.150662}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "kind": "created", "ts": 1755789913.4355726}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\docker-compose.yml", "kind": "created", "ts": 1755789923.7772524}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\README.md", "kind": "created", "ts": 1755789952.2683983}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\__init__.py", "kind": "created", "ts": 1755789959.6081557}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_health.py", "kind": "created", "ts": 1755789967.9926238}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\deploy.ps1", "kind": "modified", "ts": 1755799527.280217}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\deploy.ps1", "delta_lines": 0, "ts": 1755799527.3147688, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 189, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\deploy.ps1", "kind": "modified", "ts": 1755799533.374186}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\deploy.ps1", "delta_lines": 0, "ts": 1755799533.4087288, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\docker-compose.yml", "kind": "modified", "ts": 1755811467.5363626}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\docker-compose.yml", "delta_lines": 0, "ts": 1755811467.5672133, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 40, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\config.py", "kind": "modified", "ts": 1755817962.8671944}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\config.py", "rule": "Echo on py change (demo)", "ts": 1755817962.898216, "span": [0, 2167]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\config.py", "delta_lines": 0, "ts": 1755817962.9022162, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 67, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\__init__.py", "kind": "created", "ts": 1755821030.203282}
+{"type": "dir_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core", "kind": "dir_created", "ts": 1755821030.203282}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "kind": "created", "ts": 1755821050.5014029}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\auth_client.py", "kind": "created", "ts": 1755821062.687444}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "kind": "modified", "ts": 1755821073.860134}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "rule": "Echo on py change (demo)", "ts": 1755821073.9673486, "span": [0, 4374]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "delta_lines": 0, "ts": 1755821073.9723477, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 142, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "kind": "modified", "ts": 1755821086.2838354}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "rule": "Echo on py change (demo)", "ts": 1755821086.3723547, "span": [0, 6793]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "delta_lines": 59, "ts": 1755821086.3892956, "rate_5m": 284.939, "accel_5m": 56.988, "added_lines": 59, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "kind": "modified", "ts": 1755821108.6540852}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "rule": "Echo on py change (demo)", "ts": 1755821108.7653341, "span": [0, 2221]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "delta_lines": 0, "ts": 1755821108.7683325, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 83, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "kind": "modified", "ts": 1755821123.9137356}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "rule": "Echo on py change (demo)", "ts": 1755821124.0252974, "span": [0, 3755]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "delta_lines": 36, "ts": 1755821124.0402966, "rate_5m": 141.55, "accel_5m": 28.31, "added_lines": 37, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "kind": "modified", "ts": 1755821143.2648773}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "rule": "Echo on py change (demo)", "ts": 1755821143.3691447, "span": [0, 6624]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "delta_lines": 85, "ts": 1755821143.3842533, "rate_5m": 209.761, "accel_5m": 41.952, "added_lines": 91, "deleted_lines": 6}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\tools\\__init__.py", "kind": "created", "ts": 1755821327.3848982}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\tools\\base.py", "kind": "created", "ts": 1755821327.3848982}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\tools\\crawl_tools.py", "kind": "created", "ts": 1755821327.3848982}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\tools\\tool_registry.py", "kind": "created", "ts": 1755821327.3848982}
+{"type": "dir_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\tools", "kind": "dir_created", "ts": 1755821327.3848982}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\browser.py", "kind": "created", "ts": 1755822259.2057526}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\markdown.py", "kind": "created", "ts": 1755822354.7346501}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\crawler.py", "kind": "created", "ts": 1755822411.5682442}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\tools\\crawl_tools.py", "kind": "modified", "ts": 1755822492.8176126}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\tools\\crawl_tools.py", "rule": "Echo on py change (demo)", "ts": 1755822492.9095235, "span": [0, 6002]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\tools\\crawl_tools.py", "delta_lines": 0, "ts": 1755822492.9125278, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 182, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "kind": "modified", "ts": 1755822523.3115478}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "rule": "Echo on py change (demo)", "ts": 1755822523.427717, "span": [0, 6000]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "delta_lines": 0, "ts": 1755822523.4307148, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 200, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "kind": "modified", "ts": 1755822538.6708226}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "rule": "Echo on py change (demo)", "ts": 1755822538.775656, "span": [0, 7203]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "delta_lines": 30, "ts": 1755822538.80293, "rate_5m": 117.193, "accel_5m": 23.439, "added_lines": 49, "deleted_lines": 19}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "kind": "modified", "ts": 1755822553.030539}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "rule": "Echo on py change (demo)", "ts": 1755822553.1408267, "span": [0, 7852]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "delta_lines": 17, "ts": 1755822553.1669347, "rate_5m": 94.889, "accel_5m": 18.978, "added_lines": 35, "deleted_lines": 18}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "kind": "modified", "ts": 1755822566.3448946}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "rule": "Echo on py change (demo)", "ts": 1755822566.4492118, "span": [0, 8534]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\routes.py", "delta_lines": 15, "ts": 1755822566.4713323, "rate_5m": 86.445, "accel_5m": 17.289, "added_lines": 29, "deleted_lines": 14}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "kind": "modified", "ts": 1755826468.716931}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "delta_lines": 0, "ts": 1755826468.744934, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 63, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "kind": "modified", "ts": 1755826475.8748093}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "delta_lines": 3, "ts": 1755826475.9044876, "rate_5m": 25.147, "accel_5m": 5.029, "added_lines": 3, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\requirements.txt", "kind": "modified", "ts": 1755827083.1826298}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\requirements.txt", "delta_lines": 0, "ts": 1755827083.223222, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 28, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "kind": "modified", "ts": 1755827817.2553258}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "rule": "Echo on py change (demo)", "ts": 1755827817.302804, "span": [0, 4862]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "delta_lines": 0, "ts": 1755827817.3058045, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 137, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "kind": "modified", "ts": 1755827831.547098}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "rule": "Echo on py change (demo)", "ts": 1755827831.598239, "span": [0, 4483]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "delta_lines": -12, "ts": 1755827831.614241, "rate_5m": -50.379, "accel_5m": -10.076, "added_lines": 6, "deleted_lines": 18}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "kind": "modified", "ts": 1755827836.7051108}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "rule": "Echo on py change (demo)", "ts": 1755827836.7535944, "span": [0, 4387]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "delta_lines": -2, "ts": 1755827836.770912, "rate_5m": -43.188, "accel_5m": -8.638, "added_lines": 0, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "kind": "modified", "ts": 1755828031.7273378}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "rule": "Echo on py change (demo)", "ts": 1755828031.7759135, "span": [0, 6770]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "delta_lines": 0, "ts": 1755828031.790914, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "kind": "modified", "ts": 1755828211.3542092}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "rule": "Echo on py change (demo)", "ts": 1755828211.405796, "span": [0, 7220]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "delta_lines": 9, "ts": 1755828211.4305189, "rate_5m": 3.006, "accel_5m": 108.0, "added_lines": 43, "deleted_lines": 34}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\models.py", "kind": "modified", "ts": 1755828245.9938176}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\models.py", "delta_lines": 0, "ts": 1755828246.0534678, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 97, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "kind": "modified", "ts": 1755828326.1424818}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "delta_lines": 0, "ts": 1755828326.2307286, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "kind": "modified", "ts": 1755828495.6229284}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "delta_lines": 0, "ts": 1755828495.7066746, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 2, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "kind": "modified", "ts": 1755828503.8186042}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "delta_lines": -19, "ts": 1755828503.9021459, "rate_5m": -6.416, "accel_5m": -27.82, "added_lines": 2, "deleted_lines": 21}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "kind": "modified", "ts": 1755828507.958632}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\Dockerfile", "delta_lines": -1, "ts": 1755828508.0644164, "rate_5m": -6.6, "accel_5m": -19.456, "added_lines": 1, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "kind": "modified", "ts": 1755828603.5358634}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "rule": "Echo on py change (demo)", "ts": 1755828603.6212554, "span": [0, 7896]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "delta_lines": 17, "ts": 1755828603.6417959, "rate_5m": 1020.0, "accel_5m": 204.0, "added_lines": 29, "deleted_lines": 12}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "kind": "modified", "ts": 1755828807.6795666}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "rule": "Echo on py change (demo)", "ts": 1755828807.7445712, "span": [0, 7945]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\auth.py", "delta_lines": 0, "ts": 1755828807.7600896, "rate_5m": 4.996, "accel_5m": -204.0, "added_lines": 2, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\jobs.py", "kind": "created", "ts": 1755892409.0456033}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "created", "ts": 1755892456.6630743}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "kind": "modified", "ts": 1755892480.041673}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "rule": "Echo on py change (demo)", "ts": 1755892480.1300366, "span": [0, 6672]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "delta_lines": 1, "ts": 1755892480.1520703, "rate_5m": 60.0, "accel_5m": 12.0, "added_lines": 1, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "kind": "modified", "ts": 1755892487.2650573}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "rule": "Echo on py change (demo)", "ts": 1755892487.3611386, "span": [0, 6742]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "delta_lines": 1, "ts": 1755892487.3783662, "rate_5m": 16.613, "accel_5m": 3.323, "added_lines": 1, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\storage.py", "kind": "modified", "ts": 1755892522.8649974}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\storage.py", "rule": "Echo on py change (demo)", "ts": 1755892522.9795563, "span": [0, 9967]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\storage.py", "delta_lines": 0, "ts": 1755892522.9815578, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 271, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "modified", "ts": 1755892539.2338603}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "rule": "Echo on py change (demo)", "ts": 1755892539.3519402, "span": [0, 12494]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "delta_lines": 0, "ts": 1755892539.3549404, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 373, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "modified", "ts": 1755892576.9251363}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "rule": "Echo on py change (demo)", "ts": 1755892577.0317101, "span": [0, 15826]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "delta_lines": 91, "ts": 1755892577.0478568, "rate_5m": 144.861, "accel_5m": 28.972, "added_lines": 91, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "created", "ts": 1755893967.2848284}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "modified", "ts": 1755894031.3500795}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "rule": "Echo on py change (demo)", "ts": 1755894031.4308755, "span": [0, 15815]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "delta_lines": 0, "ts": 1755894031.534783, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "modified", "ts": 1755894038.6564043}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "rule": "Echo on py change (demo)", "ts": 1755894038.7212052, "span": [0, 15850]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "delta_lines": 0, "ts": 1755894038.7384796, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 2, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "modified", "ts": 1755894043.7953897}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "rule": "Echo on py change (demo)", "ts": 1755894043.85935, "span": [0, 15935]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "delta_lines": 0, "ts": 1755894043.8783498, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 5, "deleted_lines": 5}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "modified", "ts": 1755894049.9812486}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "rule": "Echo on py change (demo)", "ts": 1755894050.0476406, "span": [0, 15961]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "delta_lines": 0, "ts": 1755894050.0726397, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "modified", "ts": 1755894055.1461754}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "rule": "Echo on py change (demo)", "ts": 1755894055.212677, "span": [0, 16065]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "delta_lines": 0, "ts": 1755894055.2334108, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 4, "deleted_lines": 4}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "kind": "modified", "ts": 1755894062.3149378}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "rule": "Echo on py change (demo)", "ts": 1755894062.4252, "span": [0, 16077]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\job_routes.py", "delta_lines": 0, "ts": 1755894062.4773023, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 8, "deleted_lines": 8}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_simple.py", "kind": "created", "ts": 1755894079.714525}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\storage\\973dfe463ec8\\0cdeef85-9d03-4e58-b890-14cf2ece6700\\metadata.json", "kind": "created", "ts": 1755894086.0105994}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\storage\\973dfe463ec8\\0cdeef85-9d03-4e58-b890-14cf2ece6700\\session_status.json", "kind": "created", "ts": 1755894086.0105994}
+{"type": "dir_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\storage\\973dfe463ec8", "kind": "dir_created", "ts": 1755894086.0105994}
+{"type": "dir_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\storage\\973dfe463ec8\\0cdeef85-9d03-4e58-b890-14cf2ece6700", "kind": "dir_created", "ts": 1755894086.0105994}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "created", "ts": 1755894415.7829537}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_job_system_unit.py", "kind": "created", "ts": 1755894459.7173417}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894472.2036462}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894472.3856773, "span": [0, 7678]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894472.3876781, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 220, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894481.5534096}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894481.7445066, "span": [0, 7871]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 4, "ts": 1755894481.7719188, "rate_5m": 25.669, "accel_5m": 5.134, "added_lines": 19, "deleted_lines": 15}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894495.9952254}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894496.1958423, "span": [0, 8625]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 23, "ts": 1755894496.2149408, "rate_5m": 68.091, "accel_5m": 13.618, "added_lines": 30, "deleted_lines": 7}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894507.3955717}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894507.5886343, "span": [0, 8650]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894507.6092818, "rate_5m": 46.033, "accel_5m": 9.207, "added_lines": 3, "deleted_lines": 3}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894515.7531815}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894515.9487216, "span": [0, 8653]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894515.9656875, "rate_5m": 37.199, "accel_5m": 7.44, "added_lines": 2, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894524.1064246}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894524.2987387, "span": [0, 8664]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894524.3215072, "rate_5m": 31.212, "accel_5m": 6.242, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894530.4099302}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894530.6109188, "span": [0, 8675]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894530.6278203, "rate_5m": 27.832, "accel_5m": 5.566, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894539.7852383}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894540.002126, "span": [0, 8678]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894540.0267746, "rate_5m": 23.971, "accel_5m": 4.794, "added_lines": 2, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894550.220452}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894550.4247012, "span": [0, 8618]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": -4, "ts": 1755894550.4396994, "rate_5m": 17.688, "accel_5m": 3.538, "added_lines": 3, "deleted_lines": 7}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894665.4433956}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894665.6416404, "span": [0, 8414]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": -2, "ts": 1755894665.6657917, "rate_5m": 6.52, "accel_5m": -9.688, "added_lines": 1, "deleted_lines": 3}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894672.8262131}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894673.0404937, "span": [0, 8373]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": -1, "ts": 1755894673.0581763, "rate_5m": 5.981, "accel_5m": -8.005, "added_lines": 1, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894680.213955}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894680.5335937, "span": [0, 7544]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": -23, "ts": 1755894680.5605981, "rate_5m": -0.865, "accel_5m": -8.646, "added_lines": 1, "deleted_lines": 24}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894686.673401}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894686.8679354, "span": [0, 7556]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894686.883558, "rate_5m": -0.839, "accel_5m": -8.017, "added_lines": 3, "deleted_lines": 3}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894692.9849815}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894693.1837947, "span": [0, 7560]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894693.2097933, "rate_5m": -0.815, "accel_5m": -7.316, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894699.3208516}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894699.5298777, "span": [0, 7564]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894699.5474837, "rate_5m": -0.793, "accel_5m": -7.209, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894706.6550834}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894706.8580935, "span": [0, 7568]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894706.881679, "rate_5m": -0.768, "accel_5m": -11.108, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894714.0234032}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894714.2273607, "span": [0, 7572]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894714.241387, "rate_5m": -0.744, "accel_5m": -9.96, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "modified", "ts": 1755894724.4312258}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894724.6735666, "span": [0, 7305]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "delta_lines": -7, "ts": 1755894724.7052417, "rate_5m": -2.379, "accel_5m": -10.251, "added_lines": 6, "deleted_lines": 13}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755894736.920875}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894737.1266053, "span": [0, 12206]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894737.1318188, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 337, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755894743.237015}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894743.4301062, "span": [0, 12116]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": -2, "ts": 1755894743.4531064, "rate_5m": -18.999, "accel_5m": -3.8, "added_lines": 2, "deleted_lines": 4}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755894752.6008868}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894752.797222, "span": [0, 11205]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": -22, "ts": 1755894752.8182225, "rate_5m": -91.837, "accel_5m": -18.367, "added_lines": 6, "deleted_lines": 28}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755894758.9388552}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894759.1396322, "span": [0, 11221]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894759.166478, "rate_5m": -65.401, "accel_5m": -13.08, "added_lines": 4, "deleted_lines": 4}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755894764.2448757}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894764.4398167, "span": [0, 11229]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755894764.4583347, "rate_5m": -52.701, "accel_5m": -10.54, "added_lines": 2, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755894770.5476246}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894770.7531261, "span": [0, 10861]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": -12, "ts": 1755894770.7807806, "rate_5m": -64.235, "accel_5m": -12.847, "added_lines": 4, "deleted_lines": 16}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755894779.9663844}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755894780.489453, "span": [0, 10689]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": -7, "ts": 1755894780.5054564, "rate_5m": -59.937, "accel_5m": -11.987, "added_lines": 2, "deleted_lines": 9}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_simple.py", "kind": "created", "ts": 1755894793.7023084}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_crawl.py", "kind": "deleted", "ts": 1755894846.3584948}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_simple.py", "kind": "created", "ts": 1755894852.4940836}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_simple.py", "kind": "deleted", "ts": 1755894852.4940836}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_simple.py", "kind": "created", "ts": 1755894857.87299}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\test_batch_simple.py", "kind": "deleted", "ts": 1755894857.87299}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "kind": "modified", "ts": 1755895003.8051782}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "rule": "Echo on py change (demo)", "ts": 1755895004.0103266, "span": [0, 6791]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "delta_lines": 1, "ts": 1755895004.0133255, "rate_5m": 60.0, "accel_5m": 12.0, "added_lines": 2, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "kind": "modified", "ts": 1755895043.686542}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "rule": "Echo on py change (demo)", "ts": 1755895043.9074242, "span": [0, 6742]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\main.py", "delta_lines": -1, "ts": 1755895043.9358258, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 1, "deleted_lines": 2}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_simple.py", "kind": "modified", "ts": 1755895141.6233683}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_simple.py", "rule": "Echo on py change (demo)", "ts": 1755895141.884802, "span": [0, 3279]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_simple.py", "delta_lines": 0, "ts": 1755895141.8878024, "rate_5m": 0.0, "accel_5m": 0.0, "added_lines": 89, "deleted_lines": 0}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755895157.157279}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755895157.3648353, "span": [0, 7511]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": -78, "ts": 1755895157.39942, "rate_5m": -4680.0, "accel_5m": -936.0, "added_lines": 172, "deleted_lines": 250}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755895165.5444152}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755895165.7420723, "span": [0, 8340]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 23, "ts": 1755895165.7600667, "rate_5m": -393.46, "accel_5m": -78.692, "added_lines": 24, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755895171.8834128}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755895172.1220882, "span": [0, 8336]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755895172.157454, "rate_5m": -224.091, "accel_5m": -44.818, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755895178.2728493}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755895178.4958372, "span": [0, 8332]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755895178.513352, "rate_5m": -156.283, "accel_5m": -31.257, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755895184.6061358}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755895184.805883, "span": [0, 8328]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755895184.8269806, "rate_5m": -120.224, "accel_5m": -24.045, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755895189.9111814}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755895190.1483812, "span": [0, 8316]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755895190.1649964, "rate_5m": -100.751, "accel_5m": -20.15, "added_lines": 3, "deleted_lines": 3}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "kind": "modified", "ts": 1755895196.2642324}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "rule": "Echo on py change (demo)", "ts": 1755895196.5030172, "span": [0, 8312]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\tests\\test_batch_crawl.py", "delta_lines": 0, "ts": 1755895196.5240161, "rate_5m": -84.384, "accel_5m": -16.877, "added_lines": 1, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "kind": "modified", "ts": 1755895316.594879}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "rule": "Echo on py change (demo)", "ts": 1755895316.9139864, "span": [0, 4912]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "delta_lines": 10, "ts": 1755895316.917988, "rate_5m": 600.0, "accel_5m": 120.0, "added_lines": 13, "deleted_lines": 3}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "kind": "modified", "ts": 1755895323.02015}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "rule": "Echo on py change (demo)", "ts": 1755895323.2963536, "span": [0, 4957]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "delta_lines": 1, "ts": 1755895323.3243172, "rate_5m": 102.719, "accel_5m": 20.544, "added_lines": 2, "deleted_lines": 1}
+{"type": "file_event", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "kind": "modified", "ts": 1755895532.799552}
+{"type": "regex", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "rule": "Echo on py change (demo)", "ts": 1755895533.0089538, "span": [0, 5174]}
+{"type": "file_stats", "path": "C:\\Users\\kord\\Code\\gnosis\\gnosis-crawl\\app\\core\\middleware.py", "delta_lines": 3, "ts": 1755895533.0219502, "rate_5m": 3.885, "accel_5m": 15.456, "added_lines": 3, "deleted_lines": 0}

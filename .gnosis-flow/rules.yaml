@@ -1,0 +1,28 @@
+
+rules:
+  - name: Errors in logs
+    include: ["**/*.log"]
+    regex: "(ERROR|CRITICAL)"
+    lines_before: 2
+    lines_after: 5
+    action:
+      type: notify
+
+  - name: DB failures
+    include: ["**/*.log"]
+    fuzzy: ["failed to connect", "timeout contacting db", "connection refused"]
+    threshold: 0.85
+    lines_before: 1
+    lines_after: 4
+    action:
+      type: notify
+
+  - name: Echo on py change (demo)
+    include: ["**/*.py"]
+    regex: 'def \w+\('
+    action:
+      type: ahp_tool
+      name: echo.text
+      args:
+        text: "Changed {{path}} matched rule {{rule}}"
+        prefix: "[gnosis-flow] "
