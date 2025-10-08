@@ -45,6 +45,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return self.auth_client
     
     async def dispatch(self, request: Request, call_next):
+        # Check if auth is disabled globally (for Porter/Kubernetes deployments)
+        from app.config import settings
+        if settings.disable_auth:
+            logger.debug("Auth disabled globally - skipping authentication")
+            response = await call_next(request)
+            return response
+
         # Skip auth for certain paths - CHECK THIS FIRST before any auth client access
         logger.debug(f"AuthMiddleware checking path: '{request.url.path}'")
         if request.url.path in ["/", "/health", "/tools", "/@search", "/auth", "/docs", "/redoc", "/openapi.json"]:
@@ -101,8 +108,15 @@ async def auth_middleware(request: Request, call_next):
     Combined authentication middleware for backwards compatibility.
     Validates JWT tokens with auth service.
     """
+    from app.config import settings
+
+    # Check if auth is disabled globally (for Porter/Kubernetes deployments)
+    if settings.disable_auth:
+        logger.debug("Auth disabled globally - skipping authentication")
+        return await call_next(request)
+
     from app.auth import auth_client
-    
+
     # Skip auth for certain paths
     if request.url.path in ["/", "/health", "/tools", "/@search", "/auth", "/docs", "/redoc", "/openapi.json"]:
         return await call_next(request)

@@ -59,6 +59,13 @@ async def verify_internal_token(request: Request):
     Dependency that validates the short-lived, internal HMAC token found in
     pre-signed tool URLs and populates request.state.actor with the payload.
     """
+    # Skip auth if disabled globally (Porter/Kubernetes deployments)
+    if settings.disable_auth:
+        logger.debug("Auth disabled - skipping token verification")
+        request.state.actor = {"sub": "anonymous", "agent_id": "porter"}
+        request.state.bearer_token = "disabled"
+        return
+
     bearer_token = request.query_params.get("bearer_token")
     if not bearer_token:
         raise HTTPException(status_code=401, detail="Missing bearer token")
@@ -68,7 +75,7 @@ async def verify_internal_token(request: Request):
         token_payload = validate_token_from_query(bearer_token, CRAWL_SECRET_KEY)
         request.state.actor = token_payload  # Payload is {"sub": "...", "agent_id": "..."}
         request.state.bearer_token = bearer_token
-        
+
     except HTTPException as e:
         # Re-raise HTTP exceptions
         raise e

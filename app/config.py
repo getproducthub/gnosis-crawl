@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     gcs_bucket_name: Optional[str] = None
     
     # Authentication
+    disable_auth: bool = False
     gnosis_auth_url: str = "http://gnosis-auth:5000"
     
     # Crawling Configuration

@@ -64,6 +64,26 @@ Gnosis-Crawl is a focused, API-only crawling service that provides:
    ./deploy.ps1 -Target cloudrun -Tag v1.0.0
    ```
 
+### Porter/Kubernetes Deployment (No Auth)
+
+For standalone deployments without gnosis-auth:
+
+1. **Copy Porter config:**
+   ```bash
+   cp .env.porter .env
+   ```
+
+2. **Deploy to your cluster:**
+   - The `DISABLE_AUTH=true` flag bypasses all authentication
+   - All endpoints become publicly accessible
+   - Recommended for internal/private clusters only
+
+3. **Build and deploy:**
+   ```bash
+   docker build -t gnosis-crawl:latest .
+   # Push to your registry and deploy via Porter/kubectl
+   ```
+
 ## Configuration
 
 Environment variables (see `.env.example`):
@@ -78,7 +98,8 @@ Environment variables (see `.env.example`):
 - `RUNNING_IN_CLOUD` - Cloud mode flag (default: false)
 - `GCS_BUCKET_NAME` - GCS bucket for cloud storage
 
-### Authentication  
+### Authentication
+- `DISABLE_AUTH` - Disable all authentication (default: false) ⚠️
 - `GNOSIS_AUTH_URL` - Gnosis-auth service URL
 
 ### Crawling
@@ -89,7 +110,9 @@ Environment variables (see `.env.example`):
 
 ## Authentication
 
-All API endpoints require authentication via gnosis-auth:
+### With gnosis-auth (default)
+
+All API endpoints require authentication:
 
 ```bash
 curl -H "Authorization: Bearer <token>" \
@@ -97,6 +120,18 @@ curl -H "Authorization: Bearer <token>" \
      -H "Content-Type: application/json" \
      -d '{"url": "https://example.com"}'
 ```
+
+### Without authentication (DISABLE_AUTH=true)
+
+When auth is disabled (Porter/Kubernetes deployments), no token required:
+
+```bash
+curl -X POST http://localhost:8080/api/crawl \
+     -H "Content-Type: application/json" \
+     -d '{"url": "https://example.com"}'
+```
+
+⚠️ **Warning:** Only use `DISABLE_AUTH=true` in trusted, internal environments.
 
 ## Architecture
 
