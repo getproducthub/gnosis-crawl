@@ -220,7 +220,7 @@ async def crawl_batch_urls(
             urls=url_list,
             javascript=request.options.javascript,
             screenshot=request.options.screenshot,
-            max_concurrent=request.options.max_concurrent,
+            max_concurrent=request.concurrent,
             session_id=session_id
         )
         
