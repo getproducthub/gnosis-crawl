@@ -8,8 +8,8 @@ import time
 from typing import Optional, Dict, Any
 
 # Configuration - UPDATE THESE
-API_BASE_URL = "http://your-deployed-url.com"  # Update with actual URL
-CUSTOMER_ID = "test-client-123"  # Your test customer ID
+API_BASE_URL = "https://crawler-agent-11733-2111b026-6tr5gw8l.onporter.run/"  # Update with actual URL
+CUSTOMER_ID = "kordless"  # Your test customer ID
 BEARER_TOKEN = None  # Set if testing with auth: "your-bearer-token-here"
 
 # Test URLs
