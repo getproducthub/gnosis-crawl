@@ -50,7 +50,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Browsers are already installed in the base image
+# Install Playwright browsers (chromium) to match the installed Python package version
+RUN playwright install --with-deps chromium
 
 # Copy application code
 COPY app/ ./app/
