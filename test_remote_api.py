@@ -272,6 +272,43 @@ class APITester:
             self.print_result(False, f"Exception: {e}")
             return False
     
+    def test_storage_debug(self) -> bool:
+        """Test storage debug endpoint to see where files are"""
+        self.print_section("Testing Storage Debug Info")
+        
+        try:
+            response = self.session.get(
+                f"{self.base_url}/api/debug/storage",
+                params={"customer_id": self.customer_id}
+            )
+            
+            print(f"Response Status: {response.status_code}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                print(f"Customer Hash: {data.get('customer_hash')}")
+                print(f"Storage Root: {data.get('storage_root')}")
+                print(f"Customer Path: {data.get('customer_path')}")
+                print(f"Path Exists: {data.get('customer_path_exists')}")
+                print(f"Total Sessions: {data.get('total_sessions', 0)}")
+                
+                for session in data.get('sessions', [])[:3]:  # Show first 3
+                    print(f"\n  Session: {session.get('session_id')}")
+                    print(f"  Files: {len(session.get('files', []))}")
+                    for file_info in session.get('files', [])[:5]:  # First 5 files
+                        print(f"    - {file_info.get('relative_path')} ({file_info.get('size')} bytes)")
+                
+                self.print_result(True, "Storage debug info retrieved")
+                return True
+            else:
+                print(f"Error Response: {response.text}")
+                self.print_result(False, f"Storage debug failed - Status {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.print_result(False, f"Storage debug exception: {e}")
+            return False
+    
     def run_all_tests(self):
         """Run complete test suite"""
         print(f"\n{'#'*60}")

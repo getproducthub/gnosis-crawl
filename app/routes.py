@@ -220,9 +220,10 @@ async def crawl_batch_urls(
             urls=url_list,
             javascript=request.options.javascript,
             screenshot=request.options.screenshot,
-            max_concurrent=request.concurrent,
+            max_concurrent=request.concurrent,  # Fixed: it's on BatchRequest, not options
             session_id=session_id
         )
+
         
         return BatchResult(
             success=True,
@@ -325,10 +326,82 @@ async def list_session_files(
     try:
         pref = prefix or ''
         files = await storage.list_files(pref or '', session_id)
-        return {"session_id": session_id, "prefix": pref, "files": files}
+        
+        # Add storage path info for debugging
+        storage_path = None
+        if hasattr(storage, '_storage_root'):
+            storage_path = str(storage.get_session_path(session_id))
+        
+        return {
+            "session_id": session_id, 
+            "prefix": pref, 
+            "files": files,
+            "storage_info": {
+                "customer_identifier": customer_identifier,
+                "customer_hash": storage._user_hash,
+                "storage_path": storage_path,
+                "is_cloud": storage._is_cloud
+            }
+        }
     except Exception as e:
         logger.error(f"Failed to list session files: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/debug/storage")
+async def debug_storage(
+    customer_id: Optional[str] = None,
+    user_email: Optional[str] = Depends(get_optional_user_email)
+):
+    """Debug endpoint to inspect storage structure and contents."""
+    import os
+    from pathlib import Path
+    
+    customer_identifier = get_customer_identifier(customer_id, user_email)
+    storage = CrawlStorageService(customer_identifier)
+    
+    result = {
+        "customer_identifier": customer_identifier,
+        "customer_hash": storage._user_hash,
+        "is_cloud": storage._is_cloud,
+        "storage_root": str(storage._storage_root) if hasattr(storage, '_storage_root') else "N/A"
+    }
+    
+    # List all directories and files in storage
+    if hasattr(storage, '_storage_root'):
+        storage_root = storage._storage_root
+        customer_path = storage_root / storage._user_hash
+        
+        result["customer_path"] = str(customer_path)
+        result["customer_path_exists"] = customer_path.exists()
+        
+        if customer_path.exists():
+            # List all sessions
+            sessions = []
+            for session_dir in customer_path.iterdir():
+                if session_dir.is_dir():
+                    session_info = {
+                        "session_id": session_dir.name,
+                        "path": str(session_dir),
+                        "files": []
+                    }
+                    
+                    # List files recursively
+                    for root, dirs, files in os.walk(session_dir):
+                        for file in files:
+                            file_path = Path(root) / file
+                            session_info["files"].append({
+                                "name": file,
+                                "relative_path": str(file_path.relative_to(session_dir)),
+                                "size": file_path.stat().st_size
+                            })
+                    
+                    sessions.append(session_info)
+            
+            result["sessions"] = sessions
+            result["total_sessions"] = len(sessions)
+    
+    return result
+
 
 @router.get("/sessions/{session_id}/file")
 async def get_session_file(
