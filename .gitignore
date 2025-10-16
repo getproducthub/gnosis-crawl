@@ -34,6 +34,10 @@ Thumbs.db
 storage/
 *.log
 
+# Version backups from file-diff-writer
+*_versions/
+*.backup
+
 # Gnosis Flow
 .gnosis-flow/
 

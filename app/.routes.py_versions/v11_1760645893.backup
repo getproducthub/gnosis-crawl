@@ -213,7 +213,7 @@ async def crawl_batch_urls(
         # Convert URLs to strings
         url_list = [str(url) for url in request.urls]
         
-        logger.info(f"Starting batch crawl for {len(url_list)} URLs (customer: {customer_identifier})")
+        logger.info(f"Starting batch crawl for {len(url_list)} URLs (user: {user_email})")
         
         # Perform batch crawl (synchronous)
         batch_result = await crawler.batch_crawl(
@@ -313,15 +313,9 @@ async def list_user_jobs(
         logger.error(f"Failed to list jobs for user {user_email}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 @router.get("/sessions/{session_id}/files")
-async def list_session_files(
-    session_id: str, 
-    prefix: Optional[str] = None, 
-    customer_id: Optional[str] = None,
-    user_email: Optional[str] = Depends(get_optional_user_email)
-):
+async def list_session_files(session_id: str, prefix: Optional[str] = None, user_email: str = Depends(get_user_email)):
     """List files stored for a session. Optional prefix (e.g., 'results', 'screenshots')."""
-    customer_identifier = get_customer_identifier(customer_id, user_email)
-    storage = CrawlStorageService(customer_identifier)
+    storage = CrawlStorageService(user_email)
     try:
         pref = prefix or ''
         files = await storage.list_files(pref or '', session_id)
@@ -331,15 +325,9 @@ async def list_session_files(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/sessions/{session_id}/file")
-async def get_session_file(
-    session_id: str, 
-    path: str, 
-    customer_id: Optional[str] = None,
-    user_email: Optional[str] = Depends(get_optional_user_email)
-):
+async def get_session_file(session_id: str, path: str, user_email: str = Depends(get_user_email)):
     """Fetch a stored file for a session by relative path (e.g., 'results/abc.json')."""
-    customer_identifier = get_customer_identifier(customer_id, user_email)
-    storage = CrawlStorageService(customer_identifier)
+    storage = CrawlStorageService(user_email)
     try:
         data = await storage.get_file(path, session_id)
         # Best-effort content type based on extension

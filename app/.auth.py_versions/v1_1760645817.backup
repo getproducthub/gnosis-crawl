@@ -226,23 +226,3 @@ async def get_user_email(user: Dict = Depends(get_current_user)) -> str:
         return user["subject"][5:]  # Remove "user:" prefix
     else:
         return "unknown@gnosis-crawl.local"
-
-
-def get_customer_identifier(customer_id: Optional[str] = None, user_email: Optional[str] = None) -> str:
-    """
-    Resolve customer identifier from either customer_id or user_email.
-    Prioritizes customer_id if provided, falls back to user_email.
-    
-    Args:
-        customer_id: Optional customer ID from request
-        user_email: Optional user email from auth
-        
-    Returns:
-        Customer identifier string for storage partitioning
-    """
-    if customer_id:
-        return customer_id
-    elif user_email:
-        return user_email
-    else:
-        return "anonymous@gnosis-crawl.local"

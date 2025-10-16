@@ -21,7 +21,6 @@ class CrawlRequest(BaseModel):
     url: HttpUrl
     options: CrawlOptions = CrawlOptions()
     session_id: Optional[str] = None
-    customer_id: Optional[str] = None
 
 
 class MarkdownRequest(BaseModel):
@@ -29,7 +28,6 @@ class MarkdownRequest(BaseModel):
     url: HttpUrl
     options: CrawlOptions = CrawlOptions()
     session_id: Optional[str] = None
-    customer_id: Optional[str] = None
 
 
 class BatchRequest(BaseModel):
@@ -38,7 +36,6 @@ class BatchRequest(BaseModel):
     options: CrawlOptions = CrawlOptions()
     concurrent: int = Field(default=3, ge=1, le=10)
     session_id: Optional[str] = None
-    customer_id: Optional[str] = None
 
 
 # Response Models

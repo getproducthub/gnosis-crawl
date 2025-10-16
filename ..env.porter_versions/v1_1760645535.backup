@@ -1,0 +1,32 @@
+# Gnosis-Crawl Porter/Kubernetes Configuration
+# This config disables authentication for standalone deployments
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=8080
+DEBUG=false
+
+# Authentication - DISABLED for Porter deployment
+DISABLE_AUTH=true
+GNOSIS_AUTH_URL=http://localhost:5000
+
+# Storage Configuration
+STORAGE_PATH=./storage
+RUNNING_IN_CLOUD=false
+GCS_BUCKET_NAME=gnosis-crawl-storage
+
+# Crawling Configuration
+MAX_CONCURRENT_CRAWLS=5
+CRAWL_TIMEOUT=30
+ENABLE_JAVASCRIPT=true
+ENABLE_SCREENSHOTS=true
+
+# Browser Configuration
+BROWSER_HEADLESS=true
+BROWSER_TIMEOUT=30000
+
+# Cloud Configuration (unused in Porter)
+GOOGLE_CLOUD_PROJECT=
+CLOUD_TASKS_QUEUE=crawl-jobs
+CLOUD_TASKS_LOCATION=us-central1
+WORKER_SERVICE_URL=
