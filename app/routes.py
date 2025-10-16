@@ -4,7 +4,7 @@ API routes for gnosis-crawl service
 import uuid
 import logging
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from datetime import datetime
 
 from app.models import (
