@@ -88,6 +88,40 @@ For standalone deployments without gnosis-auth:
    # Push to your registry and deploy via Porter/kubectl
    ```
 
+### Cloud Storage (GCS) Setup
+
+For production deployments using Google Cloud Storage:
+
+1. **Create GCS bucket:**
+   ```bash
+   gsutil mb gs://gnosis-crawl-storage
+   ```
+
+2. **Set permissions:**
+   ```bash
+   # Grant service account write access
+   gsutil iam ch serviceAccount:YOUR-SA@PROJECT.iam.gserviceaccount.com:objectAdmin gs://gnosis-crawl-storage
+   ```
+
+3. **Use cloud config:**
+   ```bash
+   cp .env.cloud .env
+   ```
+
+4. **Update environment variables:**
+   ```bash
+   RUNNING_IN_CLOUD=true
+   GCS_BUCKET_NAME=gnosis-crawl-storage
+   GOOGLE_CLOUD_PROJECT=your-project-id  # Optional if running in GCP
+   ```
+
+5. **Install GCS client:**
+   ```bash
+   pip install google-cloud-storage
+   ```
+
+**Note:** When running in GCP (Cloud Run, GKE), authentication is automatic via service accounts. For local development, set `GOOGLE_APPLICATION_CREDENTIALS` to your service account key file.
+
 ## Configuration
 
 Environment variables (see `.env.example`):
@@ -99,8 +133,9 @@ Environment variables (see `.env.example`):
 
 ### Storage
 - `STORAGE_PATH` - Local storage path (default: ./storage)
-- `RUNNING_IN_CLOUD` - Cloud mode flag (default: false)
-- `GCS_BUCKET_NAME` - GCS bucket for cloud storage
+- `RUNNING_IN_CLOUD` - Enable GCS cloud storage (default: false)
+- `GCS_BUCKET_NAME` - GCS bucket name (required if RUNNING_IN_CLOUD=true)
+- `GOOGLE_CLOUD_PROJECT` - GCP project ID (optional, auto-detected in GCP)
 
 ### Authentication
 - `DISABLE_AUTH` - Disable all authentication (default: false) ⚠️
