@@ -23,6 +23,10 @@ Gnosis-Crawl is a focused, API-only crawling service that provides:
 - `GET /api/jobs/{job_id}` - Get job status and results
 - `GET /api/jobs` - List user jobs
 
+### Session Management
+- `GET /api/sessions/{session_id}/files` - List files for a session
+- `GET /api/sessions/{session_id}/file` - Get specific file from session
+
 ### System
 - `GET /health` - Health check
 
@@ -112,7 +116,7 @@ Environment variables (see `.env.example`):
 
 ### With gnosis-auth (default)
 
-All API endpoints require authentication:
+All API endpoints require authentication via Bearer token. User email from the token is used for storage partitioning:
 
 ```bash
 curl -H "Authorization: Bearer <token>" \
@@ -123,15 +127,50 @@ curl -H "Authorization: Bearer <token>" \
 
 ### Without authentication (DISABLE_AUTH=true)
 
-When auth is disabled (Porter/Kubernetes deployments), no token required:
+When auth is disabled (Porter/Kubernetes deployments), use `customer_id` for storage partitioning:
 
 ```bash
 curl -X POST http://localhost:8080/api/crawl \
      -H "Content-Type: application/json" \
-     -d '{"url": "https://example.com"}'
+     -d '{
+       "url": "https://example.com",
+       "customer_id": "client-xyz-123"
+     }'
 ```
 
 ⚠️ **Warning:** Only use `DISABLE_AUTH=true` in trusted, internal environments.
+
+### Customer ID Support
+
+All crawl endpoints support an optional `customer_id` field for flexible storage partitioning:
+
+- **Priority**: `customer_id` (if provided) → authenticated user email → "anonymous"
+- **Use cases**:
+  - Unauthenticated API access (with `DISABLE_AUTH=true`)
+  - Multi-tenant storage partitioning even with auth
+  - Custom storage organization
+- **Storage path**: `storage/{hash(customer_id or user_email)}/{session_id}/`
+
+**Example with customer_id override:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     -X POST http://localhost:8080/api/crawl \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url": "https://example.com",
+       "customer_id": "custom-partition-id",
+       "session_id": "my-session"
+     }'
+```
+
+**Session file access with customer_id:**
+```bash
+# List session files
+curl "http://localhost:8080/api/sessions/my-session/files?customer_id=client-xyz-123"
+
+# Get specific file
+curl "http://localhost:8080/api/sessions/my-session/file?path=results/abc123.json&customer_id=client-xyz-123"
+```
 
 ## Architecture
 
@@ -157,13 +196,18 @@ gnosis-crawl/
 ### Storage Organization
 ```
 storage/
-└── {user_hash}/        # User partition
-    └── {session_id}/   # Session partition
+└── {customer_hash}/        # Customer partition (hash of customer_id or user_email)
+    └── {session_id}/       # Session partition
         ├── metadata.json
         └── results/
             ├── {url_hash}.json
             └── ...
 ```
+
+**Customer Hash:** 12-character SHA256 hash provides:
+- Privacy (doesn't expose actual customer_id or email)
+- Consistent bucketing per customer
+- File system safety
 
 ### Job System
 - **Local**: ThreadPoolExecutor for development
@@ -177,17 +221,18 @@ storage/
 - [x] Directory structure  
 - [x] FastAPI application
 - [x] Authentication integration
-- [x] Storage service
-- [x] API routes (mock responses)
+- [x] Customer ID support (optional auth bypass)
+- [x] Storage service with customer partitioning
+- [x] API routes
 - [x] Docker configuration
 - [x] Deployment scripts
 
-### Phase 2: Crawling (Next)
-- [ ] Browser automation (Playwright)
-- [ ] HTML extraction
-- [ ] Markdown generation  
-- [ ] Batch processing
-- [ ] Job management
+### Phase 2: Crawling ✅
+- [x] Browser automation (Playwright)
+- [x] HTML extraction
+- [x] Markdown generation  
+- [x] Batch processing
+- [x] Session management
 
 ### Phase 3: Testing & Production
 - [ ] Test suite
