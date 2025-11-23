@@ -12,6 +12,7 @@ services:
       - DEBUG=true
       - STORAGE_PATH=/app/storage
       - RUNNING_IN_CLOUD=false
+      - DISABLE_AUTH=true
       - GNOSIS_AUTH_URL=http://gnosis-auth:5000
       - MAX_CONCURRENT_CRAWLS=3
       - CRAWL_TIMEOUT=30
@@ -22,6 +23,7 @@ services:
       - ./app:/app/app  # Mount for development hot reload
     networks:
       - gnosis-network
+      - codex-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -39,3 +41,6 @@ networks:
   gnosis-network:
     name: gnosis_network
     driver: bridge
+  codex-network:
+    external: true
+    name: codex-network
