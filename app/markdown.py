@@ -253,28 +253,45 @@ class HTMLToMarkdownConverter:
         return result + "\n"
     
     def _process_table(self, element) -> str:
-        """Process table element."""
-        rows = []
-        for row in element.find_all('tr'):
-            cells = []
-            for cell in row.find_all(['td', 'th']):
-                cells.append(self._get_text_content(cell))
-            if cells:
-                rows.append("| " + " | ".join(cells) + " |")
+        """Process table element - skip layout tables."""
+        # Heuristics to detect layout tables
+        if element.find('table'):
+            return self._process_children(element)
         
+        rows = element.find_all('tr', recursive=False)
         if not rows:
             return ""
         
-        result = "\n".join(rows)
+        first_row = rows[0]
+        first_row_cells = first_row.find_all(['td', 'th'], recursive=False)
         
-        # Add header separator if first row contains th elements
-        first_row = element.find('tr')
-        if first_row and first_row.find('th'):
-            header_sep = "| " + " | ".join(["---"] * len(first_row.find_all(['td', 'th']))) + " |"
-            rows.insert(1, header_sep)
-            result = "\n".join(rows)
+        # Cells with block-level children usually mean layout usage
+        block_like_tags = ['div', 'p', 'ul', 'ol', 'table', 'article', 'section', 'header', 'footer', 'nav', 'aside']
+        for cell in first_row_cells:
+            if cell.find(block_like_tags):
+                return self._process_children(element)
         
-        return result + "\n\n"
+        # Few columns but many rows often indicates layout/spacer tables
+        if first_row_cells and len(first_row_cells) <= 2 and len(rows) >= 15:
+            return self._process_children(element)
+        
+        # Actual data table - convert to markdown
+        markdown_rows = []
+        for row in rows:
+            cells = []
+            for cell in row.find_all(['td', 'th'], recursive=False):
+                cells.append(self._get_text_content(cell))
+            if cells:
+                markdown_rows.append("| " + " | ".join(cells) + " |")
+        
+        if not markdown_rows:
+            return ""
+        
+        if first_row and first_row.find('th', recursive=False):
+            header_sep = "| " + " | ".join(["---"] * len(first_row_cells)) + " |"
+            markdown_rows.insert(1, header_sep)
+        
+        return "\n".join(markdown_rows) + "\n\n"
     
     def _clean_markdown(self, markdown: str) -> str:
         """Clean up generated markdown."""
