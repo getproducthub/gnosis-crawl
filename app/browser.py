@@ -200,7 +200,14 @@ class BrowserEngine:
         
         return context, page
 
-    async def crawl_with_context(self, url: str, javascript_enabled: bool = True, timeout: int = 30000, take_screenshot: bool = False) -> tuple[str, dict, bytes]:
+    async def crawl_with_context(
+        self,
+        url: str,
+        javascript_enabled: bool = True,
+        timeout: int = 30000,
+        take_screenshot: bool = False,
+        javascript_payload: Optional[str] = None
+    ) -> tuple[str, dict, bytes]:
         """Crawl URL using an isolated context for concurrent operations."""
         context, page = await self.create_isolated_context(javascript_enabled)
         
@@ -218,6 +225,29 @@ class BrowserEngine:
                     await asyncio.sleep(1)
                     
                     logger.info(f"Successfully navigated to {url}")
+                    
+                    # Execute user-provided JavaScript payload before capturing HTML
+                    if javascript_enabled and javascript_payload:
+                        try:
+                            logger.info("Executing custom JavaScript payload")
+                            await page.evaluate(
+                                """
+                                async payload => {
+                                    const executor = new Function("return (async () => { " + payload + "\\n})();");
+                                    try {
+                                        return await executor();
+                                    } catch (error) {
+                                        console.error("Injected JavaScript payload failed", error);
+                                        throw error;
+                                    }
+                                }
+                                """,
+                                javascript_payload
+                            )
+                            # Give DOM a brief moment to settle after script execution
+                            await asyncio.sleep(0.5)
+                        except Exception as e:
+                            logger.warning(f"JavaScript payload execution failed: {e}")
                     
                     # Get page content
                     content = await page.content()

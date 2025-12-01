@@ -38,6 +38,7 @@ ENV PYTHONPATH=/app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user

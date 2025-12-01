@@ -10,6 +10,7 @@ from datetime import datetime
 from app.models import (
     CrawlRequest, CrawlResult, 
     MarkdownRequest, MarkdownResult,
+    RawHtmlRequest, RawHtmlResult,
     BatchRequest, BatchResult,
     JobStatus, JobListResponse
 )
@@ -70,12 +71,16 @@ async def crawl_single_url(
         session_id = request.session_id or str(uuid.uuid4())
         
         # Perform crawl with request options
+        javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
+        javascript_payload = request.javascript_payload or request.options.javascript_payload
+        
         result = await crawler.crawl_url(
             url=str(request.url),
-            javascript=request.options.javascript,
+            javascript=javascript_enabled,
             screenshot=request.options.screenshot,
             screenshot_mode=request.options.screenshot_mode,
             timeout=request.options.timeout,
+            javascript_payload=javascript_payload,
             session_id=session_id
         )
         
@@ -151,11 +156,20 @@ async def crawl_markdown_only(
         crawler = await get_crawler_engine(customer_identifier)
         
         # Perform markdown-only crawl
-        markdown_content = await crawler.crawl_for_markdown_only(
-            url=str(request.url),
-            javascript=request.options.javascript,
-            timeout=request.options.timeout
-        )
+        url_candidates = request.urls or ([request.url] if request.url else [])
+        javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
+        javascript_payload = request.javascript_payload or request.options.javascript_payload
+
+        markdown_pieces = []
+        for target in url_candidates:
+            piece = await crawler.crawl_for_markdown_only(
+                url=str(target),
+                javascript=javascript_enabled,
+                timeout=request.options.timeout,
+                javascript_payload=javascript_payload
+            )
+            markdown_pieces.append(f"## {target}\n\n{piece}")
+        markdown_content = "\n\n---\n\n".join(markdown_pieces)
         
         # Check if crawl was successful by looking for error indicators
         if "Error" in markdown_content[:50]:  # Simple error check
@@ -190,6 +204,64 @@ async def crawl_markdown_only(
         )
 
 
+@router.post("/raw", response_model=RawHtmlResult)
+async def crawl_raw_html(
+    request: RawHtmlRequest,
+    user_email: Optional[str] = Depends(get_optional_user_email)
+):
+    """
+    Crawl a URL and return raw HTML content.
+    Supports JavaScript execution and custom payload injection.
+    """
+    customer_identifier = None
+    try:
+        customer_identifier = get_customer_identifier(request.customer_id, user_email)
+        crawler = await get_crawler_engine(customer_identifier)
+        javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
+        javascript_payload = request.javascript_payload or request.options.javascript_payload
+
+        result = await crawler.crawl_raw_html(
+            url=str(request.url),
+            javascript=javascript_enabled,
+            timeout=request.options.timeout,
+            javascript_payload=javascript_payload
+        )
+
+        metadata = {
+            "customer_identifier": customer_identifier,
+            "options": request.options.dict(),
+            "session_id": request.session_id,
+            "page_info": result.get("page_info"),
+            "processing_time": result.get("processing_time")
+        }
+
+        if result.get("success"):
+            return RawHtmlResult(
+                success=True,
+                url=str(request.url),
+                html=result.get("html"),
+                metadata=metadata,
+                crawled_at=datetime.utcnow()
+            )
+        else:
+            return RawHtmlResult(
+                success=False,
+                url=str(request.url),
+                error=result.get("error"),
+                metadata=metadata,
+                crawled_at=datetime.utcnow()
+            )
+    except Exception as e:
+        logger.error(f"Failed to fetch raw HTML for {request.url}: {e}", exc_info=True)
+        return RawHtmlResult(
+            success=False,
+            url=str(request.url),
+            crawled_at=datetime.utcnow(),
+            error=str(e),
+            metadata={"customer_identifier": customer_identifier}
+        )
+
+
 @router.post("/batch", response_model=BatchResult)
 async def crawl_batch_urls(
     request: BatchRequest,
@@ -212,16 +284,19 @@ async def crawl_batch_urls(
         
         # Convert URLs to strings
         url_list = [str(url) for url in request.urls]
+        javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
+        javascript_payload = request.javascript_payload or request.options.javascript_payload
         
         logger.info(f"Starting batch crawl for {len(url_list)} URLs (customer: {customer_identifier})")
         
         # Perform batch crawl (synchronous)
         batch_result = await crawler.batch_crawl(
             urls=url_list,
-            javascript=request.options.javascript,
+            javascript=javascript_enabled,
             screenshot=request.options.screenshot,
             max_concurrent=request.concurrent,  # Fixed: it's on BatchRequest, not options
-            session_id=session_id
+            session_id=session_id,
+            javascript_payload=javascript_payload
         )
 
         

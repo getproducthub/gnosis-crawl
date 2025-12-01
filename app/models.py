@@ -3,6 +3,7 @@ Pydantic models for gnosis-crawl API requests and responses
 """
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, HttpUrl, Field
+from pydantic import root_validator
 from datetime import datetime
 
 
@@ -14,6 +15,7 @@ class CrawlOptions(BaseModel):
     screenshot_mode: str = "full"
     full_content: bool = True
     timeout: int = Field(default=30, ge=5, le=300)
+    javascript_payload: Optional[str] = None
 
 
 class CrawlRequest(BaseModel):
@@ -22,14 +24,35 @@ class CrawlRequest(BaseModel):
     options: CrawlOptions = CrawlOptions()
     session_id: Optional[str] = None
     customer_id: Optional[str] = None
+    javascript_enabled: Optional[bool] = None
+    javascript_payload: Optional[str] = None
 
 
 class MarkdownRequest(BaseModel):
     """Markdown-only crawl request"""
+    url: Optional[HttpUrl] = None
+    urls: Optional[List[HttpUrl]] = Field(None, min_items=1, max_items=50)
+    options: CrawlOptions = CrawlOptions()
+    session_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    javascript_enabled: Optional[bool] = None
+    javascript_payload: Optional[str] = None
+
+    @root_validator(pre=True)
+    def require_url(cls, values):
+        if not values.get("url") and not values.get("urls"):
+            raise ValueError("url or urls required")
+        return values
+
+
+class RawHtmlRequest(BaseModel):
+    """Raw HTML crawl request"""
     url: HttpUrl
     options: CrawlOptions = CrawlOptions()
     session_id: Optional[str] = None
     customer_id: Optional[str] = None
+    javascript_enabled: Optional[bool] = None
+    javascript_payload: Optional[str] = None
 
 
 class BatchRequest(BaseModel):
@@ -39,6 +62,8 @@ class BatchRequest(BaseModel):
     concurrent: int = Field(default=3, ge=1, le=10)
     session_id: Optional[str] = None
     customer_id: Optional[str] = None
+    javascript_enabled: Optional[bool] = None
+    javascript_payload: Optional[str] = None
 
 
 # Response Models
@@ -59,6 +84,16 @@ class MarkdownResult(BaseModel):
     success: bool
     url: str
     markdown: Optional[str] = None
+    metadata: Dict[str, Any] = {}
+    crawled_at: datetime
+    error: Optional[str] = None
+
+
+class RawHtmlResult(BaseModel):
+    """Raw HTML result"""
+    success: bool
+    url: str
+    html: Optional[str] = None
     metadata: Dict[str, Any] = {}
     crawled_at: datetime
     error: Optional[str] = None

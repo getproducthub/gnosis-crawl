@@ -78,7 +78,8 @@ class CrawlerEngine:
         screenshot: bool = False,
         screenshot_mode: str = "full",
         timeout: int = None,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        javascript_payload: Optional[str] = None
     ) -> CrawlResult:
         """
         Crawl a single URL and return comprehensive results.
@@ -119,7 +120,11 @@ class CrawlerEngine:
             
             # Use isolated context for concurrent crawling
             result.html, result.page_info, screenshot_data = await browser.crawl_with_context(
-                url, javascript_enabled=javascript, timeout=timeout_ms, take_screenshot=screenshot and screenshot_mode != "off"
+                url,
+                javascript_enabled=javascript,
+                timeout=timeout_ms,
+                take_screenshot=screenshot and screenshot_mode != "off",
+                javascript_payload=javascript_payload
             )
             
             result.title = result.page_info.get("title", "")
@@ -156,7 +161,8 @@ class CrawlerEngine:
         self,
         url: str,
         javascript: bool = True,
-        timeout: int = None
+        timeout: int = None,
+        javascript_payload: Optional[str] = None
     ) -> str:
         """
         Crawl URL and return only the markdown content.
@@ -174,7 +180,8 @@ class CrawlerEngine:
                 url=url,
                 javascript=javascript,
                 screenshot=False,
-                timeout=timeout
+                timeout=timeout,
+                javascript_payload=javascript_payload
             )
             
             if result.success:
@@ -185,6 +192,51 @@ class CrawlerEngine:
         except Exception as e:
             logger.error(f"Error in markdown-only crawl: {e}")
             return f"Error: {str(e)}"
+
+    async def crawl_raw_html(
+        self,
+        url: str,
+        javascript: bool = True,
+        timeout: int = None,
+        javascript_payload: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Crawl URL and return only raw HTML content.
+        """
+        start_time = time.time()
+        result: Dict[str, Any] = {
+            "success": False,
+            "html": "",
+            "error": None,
+            "page_info": {},
+            "processing_time": 0.0
+        }
+        try:
+            parsed_url = urlparse(url)
+            if not parsed_url.scheme or not parsed_url.netloc:
+                raise ValueError(f"Invalid URL: {url}")
+
+            browser = await get_browser_engine()
+            timeout_ms = (timeout * 1000) if timeout else settings.browser_timeout
+
+            html, page_info, _ = await browser.crawl_with_context(
+                url,
+                javascript_enabled=javascript,
+                timeout=timeout_ms,
+                take_screenshot=False,
+                javascript_payload=javascript_payload
+            )
+
+            result["success"] = True
+            result["html"] = html
+            result["page_info"] = page_info
+        except Exception as e:
+            logger.error(f"Failed to fetch raw HTML for {url}: {e}", exc_info=True)
+            result["error"] = str(e)
+        finally:
+            result["processing_time"] = time.time() - start_time
+
+        return result
     
     async def batch_crawl(
         self,
@@ -192,7 +244,8 @@ class CrawlerEngine:
         javascript: bool = True,
         screenshot: bool = False,
         max_concurrent: int = 3,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        javascript_payload: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Crawl multiple URLs concurrently.
@@ -219,7 +272,8 @@ class CrawlerEngine:
                     url=url,
                     javascript=javascript,
                     screenshot=screenshot,
-                    session_id=session_id
+                    session_id=session_id,
+                    javascript_payload=javascript_payload
                 )
         
         # Execute crawls concurrently
