@@ -3,7 +3,7 @@ API routes for gnosis-crawl service
 """
 import uuid
 import logging
-from typing import List
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Header
 from datetime import datetime
 
@@ -12,14 +12,15 @@ from app.models import (
     MarkdownRequest, MarkdownResult,
     RawHtmlRequest, RawHtmlResult,
     BatchRequest, BatchResult,
-    JobStatus, JobListResponse
+    JobStatus, JobListResponse,
+    CacheSearchRequest, CacheUpsertRequest, CachePruneRequest
 )
 from app.auth import get_current_user, get_user_email, get_customer_identifier
 from app.config import settings
 from app.crawler import get_crawler_engine
 from fastapi.responses import Response
-from typing import Optional
 from app.storage import CrawlStorageService
+from app.cache_store import RemoteCacheStore
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,37 @@ async def get_optional_user_email(authorization: str = Header(None)) -> Optional
             return None
     except:
         return None
+
+
+def _crawl_result_to_payload(result: Any, include_html: bool = False) -> Dict[str, Any]:
+    """Map internal CrawlResult to stable API response fields."""
+    payload = {
+        "success": bool(result.success),
+        "url": result.url,
+        "final_url": result.final_url or result.url,
+        "status_code": result.status_code,
+        "markdown": result.markdown,
+        "markdown_plain": result.markdown_plain,
+        "content": result.content,
+        "blocked": bool(result.blocked),
+        "block_reason": result.block_reason or None,
+        "captcha_detected": bool(result.captcha_detected),
+        "http_error_family": result.http_error_family or None,
+        "render_mode": result.render_mode,
+        "wait_strategy": result.wait_strategy,
+        "timings_ms": result.timings_ms or {},
+        "body_char_count": int(result.body_char_count or 0),
+        "body_word_count": int(result.body_word_count or 0),
+        "content_quality": result.content_quality,
+        "extractor_version": result.extractor_version,
+        "normalized_url": result.normalized_url,
+        "content_hash": result.content_hash,
+        "screenshot_url": result.screenshot_path or "",
+        "error": result.error_message or None,
+    }
+    if include_html:
+        payload["html"] = result.html
+    return payload
 
 
 @router.post("/crawl", response_model=CrawlResult)
@@ -81,6 +113,11 @@ async def crawl_single_url(
             screenshot_mode=request.options.screenshot_mode,
             timeout=request.options.timeout,
             javascript_payload=javascript_payload,
+            dedupe_tables=request.options.dedupe_tables,
+            wait_until=request.options.wait_until,
+            wait_for_selector=request.options.wait_for_selector,
+            wait_after_load_ms=request.options.wait_after_load_ms,
+            retry_with_js_if_thin=request.options.retry_with_js_if_thin,
             session_id=session_id
         )
         
@@ -96,7 +133,24 @@ async def crawl_single_url(
                 url=result.url,
                 html=result.html,
                 markdown=result.markdown,
-                screenshot_url=result.screenshot_path,
+                markdown_plain=result.markdown_plain,
+                content=result.content,
+                final_url=result.final_url or result.url,
+                status_code=result.status_code,
+                blocked=result.blocked,
+                block_reason=result.block_reason or None,
+                captcha_detected=result.captcha_detected,
+                http_error_family=result.http_error_family or None,
+                render_mode=result.render_mode,
+                wait_strategy=result.wait_strategy,
+                timings_ms=result.timings_ms or {},
+                body_char_count=result.body_char_count,
+                body_word_count=result.body_word_count,
+                content_quality=result.content_quality,
+                extractor_version=result.extractor_version,
+                normalized_url=result.normalized_url,
+                content_hash=result.content_hash,
+                screenshot_url=result.screenshot_path or "",
                 metadata={
                     "title": result.title,
                     "customer_identifier": customer_identifier,
@@ -117,6 +171,22 @@ async def crawl_single_url(
             return CrawlResult(
                 success=False,
                 url=result.url,
+                final_url=result.final_url or result.url,
+                status_code=result.status_code,
+                blocked=result.blocked,
+                block_reason=result.block_reason or None,
+                captcha_detected=result.captcha_detected,
+                http_error_family=result.http_error_family or None,
+                render_mode=result.render_mode,
+                wait_strategy=result.wait_strategy,
+                timings_ms=result.timings_ms or {},
+                body_char_count=result.body_char_count,
+                body_word_count=result.body_word_count,
+                content_quality=result.content_quality,
+                extractor_version=result.extractor_version,
+                normalized_url=result.normalized_url,
+                content_hash=result.content_hash,
+                screenshot_url=result.screenshot_path or "",
                 crawled_at=datetime.utcnow(),
                 error=result.error_message,
                 metadata={
@@ -154,44 +224,139 @@ async def crawl_markdown_only(
         
         # Get crawler engine for this customer
         crawler = await get_crawler_engine(customer_identifier)
+        cache_store = RemoteCacheStore(customer_identifier)
         
-        # Perform markdown-only crawl
+        # Perform crawl(s) with stable response contract
         url_candidates = request.urls or ([request.url] if request.url else [])
         javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
         javascript_payload = request.javascript_payload or request.options.javascript_payload
 
-        markdown_pieces = []
+        per_url_results: List[Dict[str, Any]] = []
         for target in url_candidates:
-            piece = await crawler.crawl_for_markdown_only(
+            crawl_result = await crawler.crawl_url(
                 url=str(target),
                 javascript=javascript_enabled,
+                screenshot=False,
                 timeout=request.options.timeout,
-                javascript_payload=javascript_payload
+                javascript_payload=javascript_payload,
+                dedupe_tables=request.options.dedupe_tables,
+                wait_until=request.options.wait_until,
+                wait_for_selector=request.options.wait_for_selector,
+                wait_after_load_ms=request.options.wait_after_load_ms,
+                retry_with_js_if_thin=request.options.retry_with_js_if_thin
             )
-            markdown_pieces.append(f"## {target}\n\n{piece}")
-        markdown_content = "\n\n---\n\n".join(markdown_pieces)
-        
-        # Check if crawl was successful by looking for error indicators
-        if "Error" in markdown_content[:50]:  # Simple error check
+            payload = _crawl_result_to_payload(crawl_result, include_html=False)
+            cache_doc = None
+            if crawl_result.success:
+                cache_doc = cache_store.upsert(
+                    url=crawl_result.url,
+                    markdown=crawl_result.markdown or "",
+                    markdown_plain=crawl_result.markdown_plain or "",
+                    content=crawl_result.content or "",
+                    quality=crawl_result.content_quality or "empty",
+                    status_code=crawl_result.status_code,
+                    extractor_version=crawl_result.extractor_version,
+                    normalized_url=crawl_result.normalized_url,
+                    content_hash=crawl_result.content_hash,
+                    metadata={
+                        "final_url": crawl_result.final_url or crawl_result.url,
+                        "blocked": crawl_result.blocked,
+                        "block_reason": crawl_result.block_reason,
+                        "captcha_detected": crawl_result.captcha_detected,
+                    },
+                )
+                payload["doc_id"] = cache_doc.get("doc_id")
+                payload["source_status"] = cache_doc.get("source_status")
+
+            per_url_results.append(payload)
+
+        if not per_url_results:
             return MarkdownResult(
                 success=False,
-                url=str(request.url),
+                url=str(request.url) if request.url else "",
                 crawled_at=datetime.utcnow(),
-                error=markdown_content,
+                error="No URL provided",
                 metadata={"customer_identifier": customer_identifier}
             )
-        else:
+
+        if len(per_url_results) == 1:
+            single = per_url_results[0]
             return MarkdownResult(
-                success=True,
-                url=str(request.url),
-                markdown=markdown_content,
+                success=bool(single.get("success")),
+                url=single.get("url", ""),
+                final_url=single.get("final_url"),
+                status_code=single.get("status_code"),
+                markdown=single.get("markdown"),
+                markdown_plain=single.get("markdown_plain"),
+                content=single.get("content"),
+                blocked=bool(single.get("blocked")),
+                block_reason=single.get("block_reason"),
+                captcha_detected=bool(single.get("captcha_detected")),
+                http_error_family=single.get("http_error_family"),
+                render_mode=single.get("render_mode"),
+                wait_strategy=single.get("wait_strategy"),
+                timings_ms=single.get("timings_ms") or {},
+                body_char_count=int(single.get("body_char_count") or 0),
+                body_word_count=int(single.get("body_word_count") or 0),
+                content_quality=single.get("content_quality"),
+                extractor_version=single.get("extractor_version"),
+                normalized_url=single.get("normalized_url"),
+                content_hash=single.get("content_hash"),
                 metadata={
                     "customer_identifier": customer_identifier,
                     "options": request.options.dict(),
-                    "session_id": request.session_id
+                    "session_id": request.session_id,
+                    "doc_id": single.get("doc_id"),
+                    "source_status": single.get("source_status"),
                 },
-                crawled_at=datetime.utcnow()
+                crawled_at=datetime.utcnow(),
+                error=single.get("error")
             )
+
+        all_success = all(item.get("success") for item in per_url_results)
+        joined_markdown = "\n\n---\n\n".join(
+            [f"## {item.get('url')}\n\n{item.get('markdown') or ''}" for item in per_url_results]
+        )
+        joined_plain = "\n\n---\n\n".join(
+            [f"## {item.get('url')}\n\n{item.get('markdown_plain') or ''}" for item in per_url_results]
+        )
+        aggregate_content = "\n\n---\n\n".join(
+            [f"## {item.get('url')}\n\n{item.get('content') or ''}" for item in per_url_results]
+        )
+        first = per_url_results[0]
+        quality_values = [item.get("content_quality") for item in per_url_results if item.get("content_quality")]
+        aggregate_quality = "sufficient" if all(q == "sufficient" for q in quality_values) else "minimal"
+
+        return MarkdownResult(
+            success=all_success,
+            url=first.get("url", ""),
+            final_url=first.get("final_url"),
+            status_code=first.get("status_code"),
+            markdown=joined_markdown,
+            markdown_plain=joined_plain,
+            content=aggregate_content,
+            blocked=any(bool(item.get("blocked")) for item in per_url_results),
+            block_reason=next((item.get("block_reason") for item in per_url_results if item.get("block_reason")), None),
+            captcha_detected=any(bool(item.get("captcha_detected")) for item in per_url_results),
+            http_error_family=first.get("http_error_family"),
+            render_mode=first.get("render_mode"),
+            wait_strategy=first.get("wait_strategy"),
+            timings_ms=first.get("timings_ms") or {},
+            body_char_count=sum(int(item.get("body_char_count") or 0) for item in per_url_results),
+            body_word_count=sum(int(item.get("body_word_count") or 0) for item in per_url_results),
+            content_quality=aggregate_quality,
+            extractor_version=first.get("extractor_version"),
+            normalized_url=first.get("normalized_url"),
+            content_hash=first.get("content_hash"),
+            metadata={
+                "customer_identifier": customer_identifier,
+                "options": request.options.dict(),
+                "session_id": request.session_id,
+                "results": per_url_results
+            },
+            crawled_at=datetime.utcnow(),
+            error=None if all_success else "One or more URLs failed"
+        )
         
     except Exception as e:
         logger.error(f"Failed to crawl markdown for {request.url}: {e}", exc_info=True)
@@ -296,7 +461,12 @@ async def crawl_batch_urls(
             screenshot=request.options.screenshot,
             max_concurrent=request.concurrent,  # Fixed: it's on BatchRequest, not options
             session_id=session_id,
-            javascript_payload=javascript_payload
+            javascript_payload=javascript_payload,
+            dedupe_tables=request.options.dedupe_tables,
+            wait_until=request.options.wait_until,
+            wait_for_selector=request.options.wait_for_selector,
+            wait_after_load_ms=request.options.wait_after_load_ms,
+            retry_with_js_if_thin=request.options.retry_with_js_if_thin
         )
 
         
@@ -306,13 +476,118 @@ async def crawl_batch_urls(
             total_urls=len(url_list),
             message=f"Batch crawl completed: {batch_result['summary']['success']}/{batch_result['summary']['total']} successful",
             results=batch_result["results"],
-            failed_results=batch_result["failed"],
             summary=batch_result["summary"]
         )
         
     except Exception as e:
         logger.error(f"Failed to execute batch crawl: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cache/search")
+async def cache_search(
+    request: CacheSearchRequest,
+    customer_id: Optional[str] = None,
+    user_email: Optional[str] = Depends(get_optional_user_email)
+):
+    customer_identifier = get_customer_identifier(customer_id, user_email)
+    store = RemoteCacheStore(customer_identifier)
+    matches = store.search(
+        query=request.query,
+        domain=request.domain,
+        url_prefix=request.url_prefix,
+        min_similarity=request.min_similarity,
+        max_results=request.max_results,
+        quality_in=request.quality_in or ["sufficient"],
+        since_ts=request.since_ts
+    )
+    return {
+        "success": True,
+        "matches": matches,
+        "count": len(matches),
+        "query": request.query,
+        "min_similarity": request.min_similarity
+    }
+
+
+@router.get("/cache/list")
+async def cache_list(
+    domain: Optional[str] = None,
+    quality: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    customer_id: Optional[str] = None,
+    user_email: Optional[str] = Depends(get_optional_user_email)
+):
+    customer_identifier = get_customer_identifier(customer_id, user_email)
+    store = RemoteCacheStore(customer_identifier)
+    result = store.list_docs(domain=domain, quality=quality, limit=limit, offset=offset)
+    return {
+        "success": True,
+        "docs": result["docs"],
+        "count": len(result["docs"]),
+        "limit": result["limit"],
+        "offset": result["offset"]
+    }
+
+
+@router.get("/cache/doc/{doc_id}")
+async def cache_get_doc(
+    doc_id: str,
+    customer_id: Optional[str] = None,
+    user_email: Optional[str] = Depends(get_optional_user_email)
+):
+    customer_identifier = get_customer_identifier(customer_id, user_email)
+    store = RemoteCacheStore(customer_identifier)
+    doc = store.get_doc(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {
+        "success": True,
+        "doc_id": doc.get("doc_id"),
+        "url": doc.get("url"),
+        "markdown": doc.get("markdown"),
+        "quality": doc.get("quality"),
+        "char_count": doc.get("char_count", 0),
+        "updated_at": doc.get("updated_at"),
+        "content_hash": doc.get("content_hash"),
+        "source_status": doc.get("source_status"),
+    }
+
+
+@router.post("/cache/upsert")
+async def cache_upsert(
+    request: CacheUpsertRequest,
+    customer_id: Optional[str] = None,
+    user_email: Optional[str] = Depends(get_optional_user_email)
+):
+    customer_identifier = get_customer_identifier(customer_id, user_email)
+    store = RemoteCacheStore(customer_identifier)
+    upserted = store.upsert(
+        url=request.url,
+        markdown=request.markdown,
+        markdown_plain=request.markdown_plain,
+        content=request.content,
+        quality=request.quality,
+        status_code=request.status_code,
+        extractor_version=request.extractor_version or "",
+        normalized_url=request.normalized_url,
+        content_hash=request.content_hash,
+        metadata=request.metadata
+    )
+    return {"success": True, "doc": upserted}
+
+
+@router.post("/cache/prune")
+async def cache_prune(
+    request: CachePruneRequest,
+    customer_id: Optional[str] = None,
+    user_email: Optional[str] = Depends(get_optional_user_email)
+):
+    customer_identifier = get_customer_identifier(customer_id, user_email)
+    store = RemoteCacheStore(customer_identifier)
+    result = store.prune(domain=request.domain, ttl_hours=request.ttl_hours, dry_run=request.dry_run)
+    return {"success": True, **result}
 
 
 @router.get("/jobs/{job_id}", response_model=JobStatus)

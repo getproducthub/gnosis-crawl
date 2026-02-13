@@ -43,8 +43,10 @@ class MarkdownResult:
 class HTMLToMarkdownConverter:
     """Convert HTML to Markdown with enhanced filtering."""
     
-    def __init__(self, base_url: str = ""):
+    def __init__(self, base_url: str = "", dedupe_tables: bool = True):
         self.base_url = base_url
+        self.dedupe_tables = dedupe_tables
+        self._layout_table_depth = 0
         self.ignore_links = False
         self.ignore_images = False
         self.ignore_emphasis = False
@@ -167,6 +169,8 @@ class HTMLToMarkdownConverter:
             text = self._process_table(element)
             
         elif tag_name == 'tr':
+            if self.dedupe_tables and self._layout_table_depth > 0:
+                return self._process_children(element)
             cells = []
             for cell in element.find_all(['td', 'th']):
                 cells.append(self._get_text_content(cell))
@@ -255,24 +259,41 @@ class HTMLToMarkdownConverter:
     def _process_table(self, element) -> str:
         """Process table element - skip layout tables."""
         # Heuristics to detect layout tables
-        if element.find('table'):
-            return self._process_children(element)
-        
+        has_nested_table = element.find('table') is not None
+
         rows = element.find_all('tr', recursive=False)
         if not rows:
+            sections = element.find_all(['thead', 'tbody', 'tfoot'], recursive=False)
+            if sections:
+                rows = []
+                for section in sections:
+                    rows.extend(section.find_all('tr', recursive=False))
+        if not rows:
+            if has_nested_table:
+                return self._process_children(element)
             return ""
-        
+
         first_row = rows[0]
         first_row_cells = first_row.find_all(['td', 'th'], recursive=False)
-        
+
         # Cells with block-level children usually mean layout usage
         block_like_tags = ['div', 'p', 'ul', 'ol', 'table', 'article', 'section', 'header', 'footer', 'nav', 'aside']
+        has_block_children = False
         for cell in first_row_cells:
             if cell.find(block_like_tags):
-                return self._process_children(element)
-        
+                has_block_children = True
+                break
+
         # Few columns but many rows often indicates layout/spacer tables
-        if first_row_cells and len(first_row_cells) <= 2 and len(rows) >= 15:
+        looks_like_layout = bool(first_row_cells and len(first_row_cells) <= 2 and len(rows) >= 15)
+
+        if has_nested_table or has_block_children or looks_like_layout:
+            if self.dedupe_tables:
+                self._layout_table_depth += 1
+                try:
+                    return self._process_children(element)
+                finally:
+                    self._layout_table_depth -= 1
             return self._process_children(element)
         
         # Actual data table - convert to markdown
@@ -371,7 +392,12 @@ class MarkdownGenerator:
     def __init__(self, content_filter: Optional[ContentFilter] = None):
         self.content_filter = content_filter or ContentFilter()
     
-    def generate_markdown(self, html: str, base_url: str = "") -> MarkdownResult:
+    def generate_markdown(
+        self,
+        html: str,
+        base_url: str = "",
+        dedupe_tables: bool = True
+    ) -> MarkdownResult:
         """Generate comprehensive markdown result from HTML."""
         if not html or not html.strip():
             return MarkdownResult(
@@ -386,8 +412,19 @@ class MarkdownGenerator:
             filtered_html = self.content_filter.filter_content(html)
             
             # Convert to markdown
-            converter = HTMLToMarkdownConverter(base_url=base_url)
+            converter = HTMLToMarkdownConverter(
+                base_url=base_url,
+                dedupe_tables=dedupe_tables
+            )
             raw_markdown = converter.convert(filtered_html)
+
+            if self._should_fallback(html, raw_markdown, base_url):
+                logger.info("Markdown fallback triggered; retrying without filtering")
+                fallback_converter = HTMLToMarkdownConverter(
+                    base_url=base_url,
+                    dedupe_tables=dedupe_tables
+                )
+                raw_markdown = fallback_converter.convert(html)
             
             # Extract links and generate citations
             links, markdown_with_citations = self._extract_links_and_generate_citations(
@@ -427,6 +464,22 @@ class MarkdownGenerator:
                 references_markdown="",
                 clean_markdown=""
             )
+
+    def _should_fallback(self, html: str, markdown: str, base_url: str) -> bool:
+        """Detect when markdown extraction is too sparse and retry without filtering."""
+        html_len = len(html or "")
+        md_len = len(markdown or "")
+        if md_len == 0:
+            return True
+        if html_len < 5000:
+            return False
+        if md_len < 400:
+            return True
+        if md_len / max(html_len, 1) < 0.01:
+            return True
+        if "news.ycombinator.com" in (base_url or "") and "item?id=" not in markdown:
+            return True
+        return False
     
     def _extract_links_and_generate_citations(self, markdown: str, base_url: str) -> Tuple[List[Dict], str]:
         """Extract links and replace with numbered citations."""

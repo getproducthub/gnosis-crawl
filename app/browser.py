@@ -206,7 +206,10 @@ class BrowserEngine:
         javascript_enabled: bool = True,
         timeout: int = 30000,
         take_screenshot: bool = False,
-        javascript_payload: Optional[str] = None
+        javascript_payload: Optional[str] = None,
+        wait_until: str = "domcontentloaded",
+        wait_for_selector: Optional[str] = None,
+        wait_after_load_ms: int = 1000
     ) -> tuple[str, dict, bytes]:
         """Crawl URL using an isolated context for concurrent operations."""
         context, page = await self.create_isolated_context(javascript_enabled)
@@ -216,13 +219,21 @@ class BrowserEngine:
             for attempt in range(max_retries):
                 try:
                     logger.info(f"Navigating to {url} (attempt {attempt + 1}/{max_retries})")
-                    
-                    # Navigate with DOM content loaded strategy
-                    await page.goto(url, timeout=timeout, wait_until='domcontentloaded')
-                    
-                    # Wait for page stability
-                    logger.info("Waiting for render stability")
-                    await asyncio.sleep(1)
+
+                    crawl_started_at = asyncio.get_running_loop().time()
+                    wait_strategy = wait_until if wait_until in {"domcontentloaded", "networkidle", "selector"} else "domcontentloaded"
+                    goto_wait_until = "domcontentloaded" if wait_strategy == "selector" else wait_strategy
+
+                    navigation_started_at = asyncio.get_running_loop().time()
+                    response = await page.goto(url, timeout=timeout, wait_until=goto_wait_until)
+                    navigation_ms = int((asyncio.get_running_loop().time() - navigation_started_at) * 1000)
+
+                    wait_started_at = asyncio.get_running_loop().time()
+                    if wait_strategy == "selector" and wait_for_selector:
+                        await page.wait_for_selector(wait_for_selector, timeout=timeout)
+                    if wait_after_load_ms > 0:
+                        await asyncio.sleep(wait_after_load_ms / 1000.0)
+                    wait_ms = int((asyncio.get_running_loop().time() - wait_started_at) * 1000)
                     
                     logger.info(f"Successfully navigated to {url}")
                     
@@ -246,20 +257,31 @@ class BrowserEngine:
                             )
                             # Give DOM a brief moment to settle after script execution
                             await asyncio.sleep(0.5)
+                            wait_ms += 500
                         except Exception as e:
                             logger.warning(f"JavaScript payload execution failed: {e}")
                     
                     # Get page content
+                    content_started_at = asyncio.get_running_loop().time()
                     content = await page.content()
+                    content_ms = int((asyncio.get_running_loop().time() - content_started_at) * 1000)
                     logger.debug(f"Retrieved content ({len(content)} characters)")
                     
                     # Get page info
                     page_info = {
                         "title": await page.title(),
                         "url": page.url,
-                        "status_code": 200,
+                        "status_code": response.status if response else None,
                         "content_type": "text/html",
-                        "content_length": len(content)
+                        "content_length": len(content),
+                        "render_mode": "js_rendered" if javascript_enabled else "html_only",
+                        "wait_strategy": wait_strategy,
+                        "timings_ms": {
+                            "navigation_ms": navigation_ms,
+                            "wait_ms": wait_ms,
+                            "content_ms": content_ms,
+                            "total_ms": int((asyncio.get_running_loop().time() - crawl_started_at) * 1000)
+                        }
                     }
                     
                     # Take screenshot if requested
