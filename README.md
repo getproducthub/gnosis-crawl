@@ -1,17 +1,21 @@
 # Gnosis-Crawl
 
-Pure API web crawling service with markdown generation, following the gnosis service standard.
+The world's only agentic web crawler. A dual-mode crawling service that operates as both a traditional API tool and an autonomous agent capable of multi-step browsing, extraction, and reasoning over live web content.
 
 ## Overview
 
-Gnosis-Crawl is a focused, API-only crawling service that provides:
+Gnosis-Crawl goes beyond fetch-and-parse. It combines a production-grade crawling API with a bounded internal agent loop that can plan, execute, and observe across multiple pages autonomously — all under strict policy controls, typed error contracts, and replayable traces.
 
+- **Mode A (External)** - First-class tool endpoints for agents and orchestrators
+- **Mode B (Internal)** - Opt-in autonomous agent loop with LLM-driven planning
 - **Single URL crawling** - Synchronous HTML + markdown extraction
-- **Markdown-only crawling** - Optimized markdown extraction  
+- **Markdown-only crawling** - Optimized markdown extraction
 - **Batch processing** - Asynchronous multi-URL crawling with job tracking
 - **Remote cache APIs** - Search-first cache/list/doc endpoints for MCP and agents
-- **User partitioned storage** - Secure, isolated data storage
-- **Gnosis-auth integration** - Standardized authentication
+- **Policy-gated execution** - Domain allowlists, private-range deny, secret redaction
+- **Multi-provider LLM support** - OpenAI, Anthropic, and Ollama out of the box
+- **User partitioned storage** - Secure, isolated data storage per customer
+- **Gnosis-auth integration** - Standardized authentication with optional bypass
 
 ## API Endpoints
 
