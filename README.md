@@ -1,6 +1,6 @@
 # Gnosis-Crawl
 
-The world's only agentic web crawler. A dual-mode crawling service that operates as both a traditional API tool and an autonomous agent capable of multi-step browsing, extraction, and reasoning over live web content.
+The world's only agentic web crawler. Built using the brain of a human that knows about distributed crawling architectures. A dual-mode crawling service that operates as both a traditional API tool and an autonomous agent capable of multi-step browsing, extraction, and reasoning over live web content.
 
 ## Overview
 
