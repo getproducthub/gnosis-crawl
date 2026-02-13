@@ -10,7 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 @tool(description="Crawl a single URL and return HTML content and markdown")
-async def crawl(url: str, javascript: bool = True, screenshot: bool = False) -> Dict[str, Any]:
+async def crawl(
+    url: str,
+    javascript: bool = True,
+    screenshot: bool = False,
+    dedupe_tables: bool = True
+) -> Dict[str, Any]:
     """Crawl a single URL with configurable options.
     
     Args:
@@ -30,6 +35,7 @@ async def crawl(url: str, javascript: bool = True, screenshot: bool = False) -> 
             url=url,
             javascript=javascript,
             screenshot=screenshot,
+            dedupe_tables=dedupe_tables,
             session_id=str(uuid.uuid4())  # Generate session ID
         )
         
@@ -73,7 +79,7 @@ async def crawl(url: str, javascript: bool = True, screenshot: bool = False) -> 
 
 
 @tool(description="Crawl a URL and return only markdown content")
-async def markdown(url: str, javascript: bool = True) -> str:
+async def markdown(url: str, javascript: bool = True, dedupe_tables: bool = True) -> str:
     """Crawl a URL and return only the markdown content.
     
     Args:
@@ -90,7 +96,8 @@ async def markdown(url: str, javascript: bool = True) -> str:
         # Perform markdown-only crawl
         markdown_content = await crawler.crawl_for_markdown_only(
             url=url,
-            javascript=javascript
+            javascript=javascript,
+            dedupe_tables=dedupe_tables
         )
         
         return markdown_content
@@ -101,7 +108,12 @@ async def markdown(url: str, javascript: bool = True) -> str:
 
 
 @tool(description="Crawl multiple URLs in batch and return results immediately")
-async def batch(urls: List[str], javascript: bool = True, max_concurrent: int = 3) -> Dict[str, Any]:
+async def batch(
+    urls: List[str],
+    javascript: bool = True,
+    max_concurrent: int = 3,
+    dedupe_tables: bool = True
+) -> Dict[str, Any]:
     """Crawl multiple URLs in batch and return results.
     
     Args:
@@ -125,7 +137,8 @@ async def batch(urls: List[str], javascript: bool = True, max_concurrent: int = 
             javascript=javascript,
             screenshot=False,  # Disable screenshots for batch to save time
             max_concurrent=max_concurrent,
-            session_id=session_id
+            session_id=session_id,
+            dedupe_tables=dedupe_tables
         )
         
         return {

@@ -9,6 +9,7 @@ Gnosis-Crawl is a focused, API-only crawling service that provides:
 - **Single URL crawling** - Synchronous HTML + markdown extraction
 - **Markdown-only crawling** - Optimized markdown extraction  
 - **Batch processing** - Asynchronous multi-URL crawling with job tracking
+- **Remote cache APIs** - Search-first cache/list/doc endpoints for MCP and agents
 - **User partitioned storage** - Secure, isolated data storage
 - **Gnosis-auth integration** - Standardized authentication
 
@@ -18,10 +19,18 @@ Gnosis-Crawl is a focused, API-only crawling service that provides:
 - `POST /api/crawl` - Crawl single URL (returns HTML + markdown)
 - `POST /api/markdown` - Crawl single URL (markdown only)
 - `POST /api/batch` - Start batch crawl job
+- `POST /api/raw` - Crawl single URL and return raw HTML
 
 ### Job Management  
 - `GET /api/jobs/{job_id}` - Get job status and results
 - `GET /api/jobs` - List user jobs
+
+### Remote Cache
+- `POST /api/cache/search` - Fuzzy search cached content
+- `GET /api/cache/list` - List cached document metadata
+- `GET /api/cache/doc/{doc_id}` - Fetch one cached document
+- `POST /api/cache/upsert` - Upsert cache entries
+- `POST /api/cache/prune` - Prune cache entries by TTL/domain
 
 ### Session Management
 - `GET /api/sessions/{session_id}/files` - List files for a session
@@ -53,8 +62,108 @@ Gnosis-Crawl is a focused, API-only crawling service that provides:
 
 4. **Access service:**
    - API: http://localhost:8080
-   - Docs: http://localhost:8080/docs
+   - Docs: disabled by default in this build
    - Health: http://localhost:8080/health
+
+## Response Contract Highlights
+
+`POST /api/markdown` returns a stable success payload with:
+
+- `success`
+- `url`
+- `final_url`
+- `status_code`
+- `markdown`
+- `markdown_plain`
+- `content`
+- `render_mode`
+- `wait_strategy`
+- `timings_ms`
+- `blocked`
+- `block_reason`
+- `captcha_detected`
+- `http_error_family`
+- `body_char_count`
+- `body_word_count`
+- `content_quality`
+- `extractor_version`
+- `normalized_url`
+- `content_hash`
+
+### Content Quality Rules
+
+`content_quality` uses:
+
+- `blocked` - anti-bot/captcha/challenge content
+- `empty` - very low signal content
+- `minimal` - thin/error pages (including 4xx responses)
+- `sufficient` - usable content for summarization
+
+Practical guardrail:
+
+- Do not summarize unless `content_quality == "sufficient"`.
+
+## Search-First Cache Flow
+
+Recommended client flow:
+
+1. Call `POST /api/cache/search`.
+2. If no good hit (or stale), crawl via `/api/markdown` or `/api/crawl`.
+3. Re-query `POST /api/cache/search`.
+4. Summarize only `sufficient` results.
+
+`POST /api/markdown` auto-indexes successful crawls into cache.
+
+### Cache Search Example
+
+`quality_in` must be a JSON array, not a comma-separated string.
+
+Correct:
+
+```bash
+curl -X POST http://localhost:8080/api/cache/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "arrived at an empty lot",
+    "domain": "www.homelight.com",
+    "quality_in": ["minimal", "sufficient"],
+    "max_results": 5
+  }'
+```
+
+Incorrect:
+
+```json
+{"quality_in":"minimal,sufficient"}
+```
+
+Note:
+
+- `domain` filtering applies to normalized hostnames. For HomeLight entries this is often `www.homelight.com`.
+
+### Cache List Example
+
+```bash
+curl "http://localhost:8080/api/cache/list?domain=www.homelight.com&limit=25"
+```
+
+### Cache Doc Example
+
+```bash
+curl "http://localhost:8080/api/cache/doc/b3350af605d76ae043ce581d"
+```
+
+### Error Format
+
+Non-200 responses use consistent JSON:
+
+```json
+{
+  "error": "http_error|validation_error|internal_error",
+  "status": 400,
+  "details": {}
+}
+```
 
 ### Docker Deployment
 

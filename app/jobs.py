@@ -353,7 +353,8 @@ class JobProcessor:
                 screenshot=input_data.get("screenshot", False),
                 screenshot_mode=input_data.get("screenshot_mode", "full"),
                 timeout=input_data.get("timeout"),
-                session_id=session_id
+                session_id=session_id,
+                dedupe_tables=input_data.get("dedupe_tables", True)
             )
 
             # Update status
@@ -409,7 +410,8 @@ class JobProcessor:
                 javascript=input_data.get("javascript", True),
                 screenshot=input_data.get("screenshot", False),
                 max_concurrent=input_data.get("max_concurrent", 3),
-                session_id=session_id
+                session_id=session_id,
+                dedupe_tables=input_data.get("dedupe_tables", True)
             )
 
             # Update final status
@@ -455,7 +457,8 @@ class JobProcessor:
             markdown = await crawler.crawl_for_markdown_only(
                 url=url,
                 javascript=input_data.get("javascript", True),
-                timeout=input_data.get("timeout")
+                timeout=input_data.get("timeout"),
+                dedupe_tables=input_data.get("dedupe_tables", True)
             )
 
             # Send completion callback
