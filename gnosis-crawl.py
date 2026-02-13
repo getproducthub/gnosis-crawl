@@ -3,8 +3,11 @@
 Gnosis Crawl MCP Bridge
 =======================
 
-Exposes Wraith crawler capabilities to Codex via MCP, mirroring
-the MCP style used in this repo (FastMCP over stdio).
+The world's only agentic web crawler — MCP interface.
+
+Exposes both traditional crawl tools (Mode A) and an autonomous agent
+loop (Mode B) to any MCP-compatible host. Built using the brain of a
+human that knows about distributed crawling architectures.
 
 Defaults to LOCAL crawling (gnosis-crawl:8080) with NO AUTH required.
 Automatically fixes localhost/127.0.0.1 references to gnosis-crawl:8080.
@@ -13,6 +16,9 @@ Tools:
   - crawl_url: fetch markdown from a single URL (supports JS injection)
   - crawl_batch: process multiple URLs (supports JS injection, async/collated)
   - raw_html: fetch raw HTML without markdown conversion
+  - download_file: download files (PDFs, etc.) through the crawler
+  - agent_run: submit a multi-step task to the autonomous agent (Mode B)
+  - agent_status: check status of a running agent task
   - set_auth_token: save Wraith API token to .wraithenv (optional)
   - crawl_status: report configuration (base URL, token presence)
   - crawl_validate: validate whether crawled text is usable
@@ -1343,6 +1349,127 @@ async def crawl_remote_cache_doc(
                         "details": text,
                     }
                 return {"success": False, "error": f"{resp.status}: {text}", "status": resp.status, "endpoint": endpoint}
+    except Exception as e:
+        return {"success": False, "error": str(e), "endpoint": endpoint}
+
+
+@mcp.tool()
+async def agent_run(
+    task: str,
+    allowed_domains: Optional[List[str]] = None,
+    max_steps: int = 12,
+    timeout: int = 90,
+    server_url: Optional[str] = None,
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    """
+    Submit a multi-step task to the autonomous crawl agent (Mode B).
+
+    The agent plans its own tool calls, executes them under policy gates,
+    and returns a final answer with a full replayable trace. Requires
+    AGENT_ENABLED=true on the server.
+
+    Use this when a task requires visiting multiple pages, following links,
+    or reasoning across crawled content — anything beyond a single fetch.
+
+    Args:
+        task: Natural language description of what to accomplish
+              (e.g. "Find the pricing page on example.com and extract plan details")
+        allowed_domains: Optional domain allowlist for this run
+                        (e.g. ["example.com", "docs.example.com"])
+        max_steps: Maximum agent loop iterations (default: 12, max: 50)
+        timeout: Wall-clock timeout in seconds (default: 90, max: 300)
+        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        ctx: MCP context (optional)
+
+    Returns:
+        Dict with agent response, trace, artifacts, and stop reason
+    """
+    if not task or not task.strip():
+        return {"success": False, "error": "task is required"}
+
+    base = _resolve_base_url(server_url)
+    endpoint = f"{base}/api/agent/run"
+
+    payload: Dict[str, Any] = {
+        "task": task.strip(),
+        "max_steps": min(max(1, int(max_steps)), 50),
+        "max_wall_time_ms": min(max(5000, int(timeout) * 1000), 300_000),
+    }
+    if allowed_domains:
+        payload["allowed_domains"] = allowed_domains
+
+    try:
+        timeout_cfg = aiohttp.ClientTimeout(total=max(10, int(timeout) + 10))
+        async with aiohttp.ClientSession(timeout=timeout_cfg) as session:
+            async with session.post(endpoint, json=payload, headers=_auth_headers()) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if isinstance(data, dict):
+                        data.setdefault("success", True)
+                    return data
+                text = await resp.text()
+                if resp.status == 404:
+                    return {
+                        "success": False,
+                        "error": "Agent endpoint not available — ensure AGENT_ENABLED=true on the server",
+                        "status": resp.status,
+                        "endpoint": endpoint,
+                        "details": text,
+                    }
+                if resp.status == 503:
+                    return {
+                        "success": False,
+                        "error": "Agent is disabled on this server. Set AGENT_ENABLED=true to enable Mode B.",
+                        "status": resp.status,
+                    }
+                return {"success": False, "error": f"{resp.status}: {text}", "status": resp.status}
+    except Exception as e:
+        return {"success": False, "error": str(e), "endpoint": endpoint}
+
+
+@mcp.tool()
+async def agent_status(
+    run_id: str,
+    server_url: Optional[str] = None,
+    timeout: int = 15,
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    """
+    Check the status of a running or completed agent task.
+
+    Args:
+        run_id: The run_id returned by agent_run
+        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        timeout: HTTP timeout seconds
+        ctx: MCP context (optional)
+
+    Returns:
+        Dict with run status, progress, partial results, and trace
+    """
+    if not run_id or not run_id.strip():
+        return {"success": False, "error": "run_id is required"}
+
+    base = _resolve_base_url(server_url)
+    endpoint = f"{base}/api/agent/status/{quote(run_id.strip(), safe='')}"
+
+    try:
+        timeout_cfg = aiohttp.ClientTimeout(total=max(5, int(timeout)))
+        async with aiohttp.ClientSession(timeout=timeout_cfg) as session:
+            async with session.get(endpoint, headers=_auth_headers()) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if isinstance(data, dict):
+                        data.setdefault("success", True)
+                    return data
+                text = await resp.text()
+                if resp.status == 404:
+                    return {
+                        "success": False,
+                        "error": f"Run '{run_id}' not found or agent endpoint unavailable",
+                        "status": resp.status,
+                    }
+                return {"success": False, "error": f"{resp.status}: {text}", "status": resp.status}
     except Exception as e:
         return {"success": False, "error": str(e), "endpoint": endpoint}
 
