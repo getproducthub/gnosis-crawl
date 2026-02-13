@@ -39,6 +39,26 @@ class Settings(BaseSettings):
     cloud_tasks_queue: str = "crawl-jobs"
     cloud_tasks_location: str = "us-central1"
     worker_service_url: Optional[str] = None
+
+    # Agent Configuration (Mode B - internal micro-agent loop)
+    agent_enabled: bool = False
+    agent_max_steps: int = 12
+    agent_max_wall_time_ms: int = 90_000
+    agent_max_failures: int = 3
+    agent_allowed_tools: str = ""  # comma-separated allowlist; empty = all registered
+    agent_allowed_domains: str = ""  # comma-separated domain allowlist; empty = all
+    agent_block_private_ranges: bool = True
+    agent_redact_secrets: bool = True
+    agent_persist_raw_html: bool = False
+
+    # LLM Provider Configuration
+    agent_provider: str = "openai"  # openai | anthropic | ollama
+    openai_api_key: Optional[str] = None
+    openai_model: str = "gpt-4.1-mini"
+    anthropic_api_key: Optional[str] = None
+    anthropic_model: str = "claude-3-5-sonnet-latest"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.1:8b-instruct"
     
     class Config:
         env_file = ".env"
@@ -62,6 +82,32 @@ class Settings(BaseSettings):
     def is_cloud_environment(self) -> bool:
         """Check if running in cloud environment"""
         return os.environ.get('RUNNING_IN_CLOUD', '').lower() == 'true'
+
+    def get_agent_allowed_tools(self) -> list[str]:
+        """Parse comma-separated tool allowlist."""
+        if not self.agent_allowed_tools:
+            return []
+        return [t.strip() for t in self.agent_allowed_tools.split(",") if t.strip()]
+
+    def get_agent_allowed_domains(self) -> list[str]:
+        """Parse comma-separated domain allowlist."""
+        if not self.agent_allowed_domains:
+            return []
+        return [d.strip() for d in self.agent_allowed_domains.split(",") if d.strip()]
+
+    def build_run_config(self):
+        """Build a RunConfig from current settings. Imported lazily to avoid circular deps."""
+        from app.agent.types import RunConfig
+        return RunConfig(
+            max_steps=self.agent_max_steps,
+            max_wall_time_ms=self.agent_max_wall_time_ms,
+            max_failures=self.agent_max_failures,
+            allowed_tools=self.get_agent_allowed_tools(),
+            allowed_domains=self.get_agent_allowed_domains(),
+            block_private_ranges=self.agent_block_private_ranges,
+            redact_secrets=self.agent_redact_secrets,
+            persist_raw_html=self.agent_persist_raw_html,
+        )
 
 
 # Global settings instance
