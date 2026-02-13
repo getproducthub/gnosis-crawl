@@ -228,3 +228,52 @@ class CachePruneRequest(BaseModel):
     domain: Optional[str] = None
     ttl_hours: Optional[int] = Field(default=None, ge=1, le=24 * 365)
     dry_run: bool = False
+
+
+# Agent Models (Mode B)
+
+class AgentRunRequest(BaseModel):
+    """Submit a task to the internal agent loop."""
+    task: str = Field(..., min_length=1, max_length=4000)
+    session_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    max_steps: int = Field(default=12, ge=1, le=50)
+    max_wall_time_ms: int = Field(default=90_000, ge=5000, le=300_000)
+    allowed_domains: Optional[List[str]] = None
+    allowed_tools: Optional[List[str]] = None
+
+
+class AgentTraceEntry(BaseModel):
+    """Single trace event in the agent run."""
+    event: Optional[str] = None
+    step_id: Optional[int] = None
+    tool_name: Optional[str] = None
+    duration_ms: Optional[int] = None
+    status: Optional[str] = None
+    error_code: Optional[str] = None
+    timestamp_ms: Optional[int] = None
+
+
+class AgentRunResponse(BaseModel):
+    """Response from an agent run."""
+    success: bool
+    run_id: str
+    stop_reason: str
+    response: Optional[str] = None
+    steps: int = 0
+    wall_time_ms: int = 0
+    trace: List[AgentTraceEntry] = []
+    artifacts: List[Dict[str, Any]] = []
+    error: Optional[str] = None
+
+
+class AgentStatusResponse(BaseModel):
+    """Status of a running or completed agent run."""
+    run_id: str
+    found: bool
+    success: Optional[bool] = None
+    stop_reason: Optional[str] = None
+    response: Optional[str] = None
+    steps: Optional[int] = None
+    wall_time_ms: Optional[int] = None
+    error: Optional[str] = None

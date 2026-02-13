@@ -42,6 +42,7 @@ class JobType(Enum):
     CRAWL_URL = "crawl_url"
     BATCH_CRAWL = "batch_crawl"
     MARKDOWN_ONLY = "markdown_only"
+    AGENT_RUN = "agent_run"
 
 class JobManager:
     """Manages submitting jobs to a queue without tracking their individual state in files."""
@@ -323,6 +324,8 @@ class JobProcessor:
                 await self._handle_batch_crawl(job_payload)
             elif job_type == JobType.MARKDOWN_ONLY:
                 await self._handle_markdown_only(job_payload)
+            elif job_type == JobType.AGENT_RUN:
+                await self._handle_agent_run(job_payload)
             else:
                 raise ValueError(f"Unknown job type: {job_type}")
             
@@ -439,6 +442,79 @@ class JobProcessor:
 
         finally:
             await crawler.cleanup()
+
+    async def _handle_agent_run(self, job_payload: dict):
+        """Handle an internal agent run (Mode B)."""
+        session_id = job_payload["session_id"]
+        input_data = job_payload["input_data"]
+        task = input_data["task"]
+        callback_url = job_payload.get("callback_url")
+        bearer_token = job_payload.get("bearer_token")
+        user_email = job_payload.get("user_email")
+
+        from app.agent.types import RunConfig
+        from app.agent.dispatcher import Dispatcher
+        from app.agent.engine import AgentEngine
+        from app.agent.providers import create_provider_from_config
+        from app.observability.trace import persist_trace
+        from app.tools.tool_registry import get_global_registry
+
+        # Build run config from input overrides + defaults
+        run_config = settings.build_run_config()
+        if input_data.get("max_steps"):
+            run_config.max_steps = input_data["max_steps"]
+        if input_data.get("max_wall_time_ms"):
+            run_config.max_wall_time_ms = input_data["max_wall_time_ms"]
+        if input_data.get("allowed_domains"):
+            run_config.allowed_domains = input_data["allowed_domains"]
+        if input_data.get("allowed_tools"):
+            run_config.allowed_tools = input_data["allowed_tools"]
+
+        # Wire up engine
+        registry = get_global_registry()
+        provider = create_provider_from_config()
+        dispatcher = Dispatcher(registry, run_config)
+        tool_schemas = registry.get_schemas()
+        engine = AgentEngine(provider, dispatcher, tool_schemas)
+
+        # Run the agent
+        result, summary = await engine.run_task(task, run_config)
+
+        # Persist trace
+        try:
+            await persist_trace(summary, session_id, user_email=user_email)
+        except Exception as e:
+            logger.error("Failed to persist agent trace: %s", e, exc_info=True)
+
+        # Update session status
+        status_data = {
+            "session_id": session_id,
+            "stages": {
+                "agent": {
+                    "status": "complete" if result.success else "failed",
+                    "is_running": False,
+                    "run_id": result.run_id,
+                    "stop_reason": result.stop_reason.value,
+                    "steps": result.steps,
+                    "wall_time_ms": result.wall_time_ms,
+                }
+            },
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        await self.job_manager.update_session_status(session_id, status_data)
+
+        # Callback
+        await self._send_callback(callback_url, bearer_token, session_id,
+            "completed" if result.success else "failed",
+            {
+                "run_id": result.run_id,
+                "response": result.response,
+                "stop_reason": result.stop_reason.value,
+                "steps": result.steps,
+                "wall_time_ms": result.wall_time_ms,
+                "error": result.error,
+            },
+        )
 
     async def _handle_markdown_only(self, job_payload: dict):
         """Handle markdown-only crawl job."""
