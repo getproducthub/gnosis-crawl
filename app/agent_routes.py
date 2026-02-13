@@ -1,0 +1,139 @@
+"""Agent API routes for gnosis-crawl Mode B.
+
+POST /api/agent/run      — submit a task to the internal agent loop
+GET  /api/agent/status/{run_id} — check status of a run (via persisted trace)
+
+Returns 503 when AGENT_ENABLED is false.
+"""
+
+import logging
+import uuid
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.routes import get_optional_user_email
+from app.config import settings
+from app.models import AgentRunRequest, AgentRunResponse, AgentStatusResponse, AgentTraceEntry
+from app.storage import CrawlStorageService
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/agent", tags=["agent"])
+
+
+def _require_agent_enabled():
+    """Dependency that gates all agent routes."""
+    if not settings.agent_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="Agent is disabled. Set AGENT_ENABLED=true to enable Mode B.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/agent/run — synchronous for now (< 90s wall time by default)
+# ---------------------------------------------------------------------------
+
+@router.post("/run", response_model=AgentRunResponse, dependencies=[Depends(_require_agent_enabled)])
+async def agent_run(
+    request: AgentRunRequest,
+    user_email: Optional[str] = Depends(get_optional_user_email),
+):
+    """Submit a task to the internal agent loop and wait for the result."""
+    from app.agent.types import RunConfig
+    from app.agent.dispatcher import Dispatcher
+    from app.agent.engine import AgentEngine
+    from app.agent.providers import create_provider_from_config
+    from app.observability.trace import persist_trace
+    from app.tools.tool_registry import get_global_registry
+
+    session_id = request.session_id or uuid.uuid4().hex[:16]
+
+    # Build run config
+    run_config = settings.build_run_config()
+    run_config.max_steps = request.max_steps
+    run_config.max_wall_time_ms = request.max_wall_time_ms
+    if request.allowed_domains:
+        run_config.allowed_domains = request.allowed_domains
+    if request.allowed_tools:
+        run_config.allowed_tools = request.allowed_tools
+
+    # Wire engine
+    registry = get_global_registry()
+    provider = create_provider_from_config()
+    dispatcher = Dispatcher(registry, run_config)
+    tool_schemas = registry.get_schemas()
+    engine = AgentEngine(provider, dispatcher, tool_schemas)
+
+    # Execute
+    result, summary = await engine.run_task(request.task, run_config)
+
+    # Persist trace (best-effort)
+    try:
+        await persist_trace(summary, session_id, user_email=user_email)
+    except Exception as exc:
+        logger.error("Failed to persist trace for run %s: %s", result.run_id, exc)
+
+    # Build response
+    trace_entries = [
+        AgentTraceEntry(
+            event=t.get("event"),
+            step_id=t.get("step_id"),
+            tool_name=t.get("tool_name"),
+            duration_ms=t.get("duration_ms"),
+            status=t.get("status"),
+            error_code=t.get("error_code"),
+            timestamp_ms=t.get("timestamp_ms"),
+        )
+        for t in summary.trace
+    ]
+
+    return AgentRunResponse(
+        success=result.success,
+        run_id=result.run_id,
+        stop_reason=result.stop_reason.value,
+        response=result.response,
+        steps=result.steps,
+        wall_time_ms=result.wall_time_ms,
+        trace=trace_entries,
+        artifacts=result.artifacts,
+        error=result.error,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/agent/status/{run_id}
+# ---------------------------------------------------------------------------
+
+@router.get("/status/{run_id}", response_model=AgentStatusResponse, dependencies=[Depends(_require_agent_enabled)])
+async def agent_status(
+    run_id: str,
+    session_id: Optional[str] = None,
+    user_email: Optional[str] = Depends(get_optional_user_email),
+):
+    """Check the status of a completed agent run by loading its persisted trace."""
+    from app.observability.trace import load_trace
+
+    if not session_id:
+        # Without session_id we can't locate the trace in storage.
+        # Return a helpful error.
+        raise HTTPException(
+            status_code=400,
+            detail="session_id query parameter is required to look up a trace.",
+        )
+
+    summary = await load_trace(run_id, session_id, user_email=user_email)
+    if summary is None:
+        return AgentStatusResponse(run_id=run_id, found=False)
+
+    return AgentStatusResponse(
+        run_id=summary.run_id,
+        found=True,
+        success=summary.success,
+        stop_reason=summary.stop_reason,
+        response=summary.response,
+        steps=summary.steps,
+        wall_time_ms=summary.wall_time_ms,
+        error=summary.error,
+    )

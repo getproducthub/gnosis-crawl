@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routes import router
 from app.job_routes import router as job_router
+from app.agent_routes import router as agent_router
 from app.tools.tool_registry import get_global_registry, ToolError
 from app.core.middleware import ContentTypeMiddleware, AuthMiddleware
 from app.auth import validate_token_from_query
@@ -154,6 +155,7 @@ app.add_middleware(
 # Include API routes (traditional REST endpoints)
 app.include_router(router, prefix="/api")
 app.include_router(job_router)  # Job routes already have /api prefix
+app.include_router(agent_router)  # Agent routes already have /api/agent prefix
 
 # Health check endpoint (no auth required) - MUST be before catch-all route
 @app.get("/health")
