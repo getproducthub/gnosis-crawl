@@ -10,6 +10,7 @@
 [![Playwright](https://img.shields.io/badge/Playwright-latest-2EAD33?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev)
 [![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet?style=flat-square)](https://modelcontextprotocol.io)
 [![Ghost Protocol](https://img.shields.io/badge/Ghost_Protocol-active-ff6b6b?style=flat-square)](#ghost-protocol)
+[![Live Stream](https://img.shields.io/badge/Live_Stream-CDP/WebSocket-00d4ff?style=flat-square)](#live-stream)
 
 <br/>
 
@@ -19,7 +20,7 @@
 
 <br/>
 
-<a href="#api-endpoints">Endpoints</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
+<a href="#api-endpoints">Endpoints</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#live-stream">Live Stream</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
 
 ---
 
@@ -38,6 +39,7 @@ Grub Crawler gets dirty so you don't have to. It penetrates every layer of prote
 | Multi-page reasoning | ❌ | ✅ Bounded state machine |
 | LLM fallback rotation | ❌ | ✅ OpenAI / Anthropic / Ollama |
 | Policy enforcement | ❌ | ✅ Domain gates, secret redaction |
+| Live browser stream | ❌ | ✅ CDP screencast over WebSocket/MJPEG |
 | Replayable traces | ❌ | ✅ Full JSON trace per run |
 
 ## API Endpoints
@@ -209,6 +211,30 @@ This bypasses DOM-based anti-bot detection entirely.
 
 Requires `AGENT_GHOST_ENABLED=true`. Auto-triggers on detected blocks when `AGENT_GHOST_AUTO_TRIGGER=true`.
 
+## Live Stream
+
+Watch the crawler work in real-time. A persistent pool of warm Chromium instances streams viewport frames over WebSocket or MJPEG.
+
+**WebSocket** — connect and send interactive commands:
+```javascript
+const ws = new WebSocket("ws://localhost:8080/stream/my-session?url=https://example.com");
+ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  if (msg.type === "frame") document.getElementById("viewport").src = "data:image/jpeg;base64," + msg.data;
+};
+// Navigate, click, scroll, type — all over the same socket
+ws.send(JSON.stringify({ action: "navigate", url: "https://example.com/pricing" }));
+ws.send(JSON.stringify({ action: "click", selector: "#signup-btn" }));
+ws.send(JSON.stringify({ action: "scroll", direction: "down" }));
+```
+
+**MJPEG** — drop it in an `<img>` tag, instant video:
+```html
+<img src="http://localhost:8080/stream/my-session/mjpeg?url=https://example.com" />
+```
+
+Requires `BROWSER_STREAM_ENABLED=true`. Each Chromium instance uses ~150-300MB RAM.
+
 ## Quick Start
 
 ### Local Development
@@ -242,6 +268,28 @@ curl -X POST http://localhost:8080/api/agent/run \
     "max_steps": 10,
     "allowed_domains": ["example.com"]
   }'
+```
+
+### Ghost Protocol (anti-bot bypass)
+
+```bash
+# Add to .env
+AGENT_GHOST_ENABLED=true
+
+curl -X POST http://localhost:8080/api/agent/ghost \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://blocked-site.com"}'
+```
+
+### Live Browser Stream
+
+```bash
+# Add to .env
+BROWSER_STREAM_ENABLED=true
+BROWSER_POOL_SIZE=2
+
+# MJPEG (open in browser)
+open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
 ```
 
 ## Configuration
