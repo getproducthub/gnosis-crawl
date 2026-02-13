@@ -8,446 +8,322 @@ Gnosis-Crawl goes beyond fetch-and-parse. It combines a production-grade crawlin
 
 - **Mode A (External)** - First-class tool endpoints for agents and orchestrators
 - **Mode B (Internal)** - Opt-in autonomous agent loop with LLM-driven planning
-- **Single URL crawling** - Synchronous HTML + markdown extraction
-- **Markdown-only crawling** - Optimized markdown extraction
-- **Batch processing** - Asynchronous multi-URL crawling with job tracking
-- **Remote cache APIs** - Search-first cache/list/doc endpoints for MCP and agents
+- **Ghost Protocol** - Vision-based fallback: when anti-bot blocks DOM scraping, screenshots the page and extracts content via Claude/GPT-4o vision
+- **Live Browser Stream** - Real-time viewport streaming over WebSocket/MJPEG (planned)
+- **Multi-provider LLM** - OpenAI, Anthropic, and Ollama with automatic fallback rotation
 - **Policy-gated execution** - Domain allowlists, private-range deny, secret redaction
-- **Multi-provider LLM support** - OpenAI, Anthropic, and Ollama out of the box
-- **User partitioned storage** - Secure, isolated data storage per customer
-- **Gnosis-auth integration** - Standardized authentication with optional bypass
+- **Replayable traces** - Every agent run produces a JSON trace for debugging and replay
+- **User partitioned storage** - Secure, isolated data per customer (local or GCS)
 
 ## API Endpoints
 
 ### Core Crawling
-- `POST /api/crawl` - Crawl single URL (returns HTML + markdown)
-- `POST /api/markdown` - Crawl single URL (markdown only)
-- `POST /api/batch` - Start batch crawl job
-- `POST /api/raw` - Crawl single URL and return raw HTML
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `POST` | `/api/crawl` | Single URL crawl (HTML + markdown) | Live |
+| `POST` | `/api/markdown` | Single or multi-URL markdown extraction | Live |
+| `POST` | `/api/batch` | Batch crawl with job tracking | Live |
+| `POST` | `/api/raw` | Raw HTML extraction (no markdown) | Live |
+| `GET`  | `/view` | Browser-rendered HTML viewer | Live |
+| `GET`  | `/download` | File download (PDFs, etc.) through crawler | Live |
 
-### Job Management  
-- `GET /api/jobs/{job_id}` - Get job status and results
-- `GET /api/jobs` - List user jobs
+### Agent (Mode B)
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `POST` | `/api/agent/run` | Submit task to autonomous agent loop | Live |
+| `GET`  | `/api/agent/status/{run_id}` | Check agent run status / load trace | Live |
+| `POST` | `/api/agent/ghost` | Ghost Protocol: screenshot + vision extract | Planned |
+
+### Job Management
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `POST` | `/api/jobs/create` | Generic job submission | Live |
+| `POST` | `/api/jobs/crawl` | Submit single URL crawl job | Live |
+| `POST` | `/api/jobs/batch-crawl` | Submit batch crawl job | Live |
+| `POST` | `/api/jobs/markdown` | Submit markdown-only job | Live |
+| `POST` | `/api/jobs/process-job` | Cloud Tasks worker endpoint | Live |
+| `POST` | `/api/wraith` | AI-driven crawl workflow | Placeholder |
 
 ### Remote Cache
-- `POST /api/cache/search` - Fuzzy search cached content
-- `GET /api/cache/list` - List cached document metadata
-- `GET /api/cache/doc/{doc_id}` - Fetch one cached document
-- `POST /api/cache/upsert` - Upsert cache entries
-- `POST /api/cache/prune` - Prune cache entries by TTL/domain
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `POST` | `/api/cache/search` | Fuzzy search cached content | Live |
+| `GET`  | `/api/cache/list` | List cached document metadata | Live |
+| `GET`  | `/api/cache/doc/{doc_id}` | Fetch one cached document | Live |
+| `POST` | `/api/cache/upsert` | Upsert cache entries | Live |
+| `POST` | `/api/cache/prune` | Prune cache entries by TTL/domain | Live |
 
 ### Session Management
-- `GET /api/sessions/{session_id}/files` - List files for a session
-- `GET /api/sessions/{session_id}/file` - Get specific file from session
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `GET`  | `/api/sessions/{session_id}/files` | List session files | Live |
+| `GET`  | `/api/sessions/{session_id}/file` | Get specific file | Live |
+| `GET`  | `/api/sessions/{session_id}/status` | Session progress status | Live |
+| `GET`  | `/api/sessions/{session_id}/results` | All crawl results | Live |
+| `GET`  | `/api/sessions/{session_id}/screenshots` | List screenshots | Live |
+
+### Live Stream (Planned)
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `WS`   | `/stream/{session_id}` | WebSocket viewport stream | Planned |
+| `GET`  | `/stream/{session_id}/mjpeg` | MJPEG fallback stream | Planned |
 
 ### System
-- `GET /health` - Health check
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `GET`  | `/health` | Health check + tool count | Live |
+| `GET`  | `/tools` | List registered AHP tools | Live |
+| `GET`  | `/{tool_name}` | Execute AHP tool (catch-all) | Live |
+
+## MCP Tools (gnosis-crawl.py)
+
+The MCP bridge exposes all capabilities to any MCP-compatible host:
+
+| Tool | Description | Status |
+|------|-------------|--------|
+| `crawl_url` | Single URL markdown extraction with JS injection | Live |
+| `crawl_batch` | Batch processing up to 50 URLs with collation | Live |
+| `raw_html` | Raw HTML fetch without conversion | Live |
+| `download_file` | Download files (PDFs, etc.) through crawler | Live |
+| `crawl_validate` | Content quality assessment | Live |
+| `crawl_search` | Fuzzy search local crawl cache | Live |
+| `crawl_cache_list` | List local cached files | Live |
+| `crawl_remote_search` | Search remote crawler cache | Live |
+| `crawl_remote_cache_list` | List remote cache entries | Live |
+| `crawl_remote_cache_doc` | Fetch remote cached document | Live |
+| `agent_run` | Submit task to autonomous agent (Mode B) | Live |
+| `agent_status` | Check agent run status | Live |
+| `set_auth_token` | Save auth token to .wraithenv | Live |
+| `crawl_status` | Report configuration and connection | Live |
+
+## Internal Modules
+
+### Agent Core (`app/agent/`)
+| File | Purpose | Status |
+|------|---------|--------|
+| `types.py` | `RunState` enum, `StopReason`, `ToolCall`, `ToolResult`, `AssistantAction`, `RunConfig`, `RunContext`, `StepTrace`, `RunResult` | Done |
+| `errors.py` | Typed errors: `validation_error`, `policy_denied`, `tool_timeout`, `tool_unavailable`, `execution_error`, `provider_error`, `stop_condition` | Done |
+| `dispatcher.py` | Tool validation, timeout enforcement (30s), retry (1x), typed error normalization | Done |
+| `engine.py` | Bounded loop: `plan -> execute -> observe -> stop`. EventBus integration. Returns `(RunResult, RunSummary)` | Done |
+| `ghost.py` | Ghost Protocol: screenshot capture, vision extraction, cloak-mode trigger | Planned |
+
+### Provider Adapters (`app/agent/providers/`)
+| File | Purpose | Status |
+|------|---------|--------|
+| `base.py` | `LLMAdapter` ABC, `FallbackAdapter` (rotate on failure), factory functions | Done |
+| `openai_adapter.py` | OpenAI tool_calls mapping, GPT-4o vision | Done |
+| `anthropic_adapter.py` | Anthropic tool_use/tool_result blocks, Claude Sonnet vision | Done |
+| `ollama_adapter.py` | Ollama HTTP `/api/chat`, llava vision | Done |
+
+### Policy Gates (`app/policy/`)
+| File | Purpose | Status |
+|------|---------|--------|
+| `domain.py` | Domain allowlist, RFC-1918/loopback/link-local deny | Done |
+| `gate.py` | Pre-tool and pre-fetch policy checks with `PolicyVerdict` | Done |
+| `redaction.py` | Secret pattern redaction (API keys, JWTs, private keys) | Done |
+
+### Observability (`app/observability/`)
+| File | Purpose | Status |
+|------|---------|--------|
+| `events.py` | `EventBus` + 7 typed events: `run_start`, `step_start`, `tool_dispatch`, `tool_result`, `policy_denied`, `step_end`, `run_end` | Done |
+| `trace.py` | `TraceCollector`, `RunSummary` JSON serialization, `persist_trace()` / `load_trace()` via storage | Done |
+
+### API Layer
+| File | Purpose | Status |
+|------|---------|--------|
+| `agent_routes.py` | `POST /api/agent/run`, `GET /api/agent/status/{run_id}`. 503 when disabled | Done |
+| `routes.py` | Core crawl/markdown/batch/cache REST endpoints | Done |
+| `job_routes.py` | Job CRUD, session status, Cloud Tasks worker | Done |
+| `jobs.py` | `JobType` enum (incl. `AGENT_RUN`), `JobManager`, `JobProcessor` | Done |
+| `models.py` | All Pydantic models incl. `AgentRunRequest/Response` | Done |
+
+### Infrastructure
+| File | Purpose | Status |
+|------|---------|--------|
+| `config.py` | All env vars incl. agent + provider + ghost config | Done |
+| `storage.py` | User-partitioned storage (local filesystem / GCS) | Done |
+| `crawler.py` | Playwright crawling engine | Done |
+| `markdown.py` | HTML to markdown conversion | Done |
+| `browser.py` | Browser automation utilities | Done |
+| `browser_pool.py` | Persistent Chromium pool for streaming | Planned |
+| `stream.py` | CDP screencast -> WebSocket/MJPEG relay | Planned |
+
+## Agent State Machine
+
+```
+INIT -> PLAN -> EXECUTE_TOOL -> OBSERVE -> PLAN -> ... -> RESPOND -> STOP
+                     |                                        |
+                     +-- policy_denied ---------------------->+
+                     +-- max_steps / max_wall_time / max_failures -> STOP
+                     +-- no_op_loop (3x empty) ------------> STOP
+                     +-- blocked (ghost trigger) -----------> GHOST -> OBSERVE
+```
+
+Stop conditions enforced every iteration:
+- `max_steps` (default: 12)
+- `max_wall_time` (default: 90s)
+- `max_failures` (default: 3)
+- `no_op_loop` (3 consecutive empty responses)
+- `policy_denied` (blocked tool/domain)
+- `completed` (agent responds with text)
+
+## Ghost Protocol
+
+When a crawl result signals an anti-bot block (Cloudflare challenge, CAPTCHA,
+empty SPA shell), the agent can switch to cloak mode:
+
+1. Take a full-page screenshot via Playwright
+2. Send the image to a vision-capable LLM (Claude Sonnet or GPT-4o)
+3. Extract content from the rendered pixels
+4. Return extracted text with `render_mode: "ghost"` in the trace
+
+This bypasses DOM-based anti-bot detection entirely.
+
+Requires `AGENT_GHOST_ENABLED=true`. Auto-triggers on detected blocks when `AGENT_GHOST_AUTO_TRIGGER=true`.
 
 ## Quick Start
 
 ### Local Development
 
-1. **Clone and setup:**
-   ```bash
-   git clone <repo>
-   cd gnosis-crawl
-   cp .env.example .env
-   ```
+```bash
+git clone <repo>
+cd gnosis-crawl
+cp .env.example .env
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+```
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run locally:**
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
-   ```
-
-4. **Access service:**
-   - API: http://localhost:8080
-   - Docs: disabled by default in this build
-   - Health: http://localhost:8080/health
-
-## Response Contract Highlights
-
-`POST /api/markdown` returns a stable success payload with:
-
-- `success`
-- `url`
-- `final_url`
-- `status_code`
-- `markdown`
-- `markdown_plain`
-- `content`
-- `render_mode`
-- `wait_strategy`
-- `timings_ms`
-- `blocked`
-- `block_reason`
-- `captcha_detected`
-- `http_error_family`
-- `body_char_count`
-- `body_word_count`
-- `content_quality`
-- `extractor_version`
-- `normalized_url`
-- `content_hash`
-
-### Content Quality Rules
-
-`content_quality` uses:
-
-- `blocked` - anti-bot/captcha/challenge content
-- `empty` - very low signal content
-- `minimal` - thin/error pages (including 4xx responses)
-- `sufficient` - usable content for summarization
-
-Practical guardrail:
-
-- Do not summarize unless `content_quality == "sufficient"`.
-
-## Search-First Cache Flow
-
-Recommended client flow:
-
-1. Call `POST /api/cache/search`.
-2. If no good hit (or stale), crawl via `/api/markdown` or `/api/crawl`.
-3. Re-query `POST /api/cache/search`.
-4. Summarize only `sufficient` results.
-
-`POST /api/markdown` auto-indexes successful crawls into cache.
-
-### Cache Search Example
-
-`quality_in` must be a JSON array, not a comma-separated string.
-
-Correct:
+### Enable Agent Mode B
 
 ```bash
-curl -X POST http://localhost:8080/api/cache/search \
+# Add to .env
+AGENT_ENABLED=true
+OPENAI_API_KEY=sk-...
+# or
+ANTHROPIC_API_KEY=sk-ant-...
+AGENT_PROVIDER=anthropic
+```
+
+### Submit an Agent Task
+
+```bash
+curl -X POST http://localhost:8080/api/agent/run \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "arrived at an empty lot",
-    "domain": "www.homelight.com",
-    "quality_in": ["minimal", "sufficient"],
-    "max_results": 5
+    "task": "Find the pricing page on example.com and extract plan details",
+    "max_steps": 10,
+    "allowed_domains": ["example.com"]
   }'
 ```
 
-Incorrect:
+## Configuration
 
-```json
-{"quality_in":"minimal,sufficient"}
-```
+### Server
+- `HOST` (default: 0.0.0.0)
+- `PORT` (default: 8080)
+- `DEBUG` (default: false)
 
-Note:
+### Storage
+- `STORAGE_PATH` (default: ./storage)
+- `RUNNING_IN_CLOUD` (default: false)
+- `GCS_BUCKET_NAME`
+- `GOOGLE_CLOUD_PROJECT`
 
-- `domain` filtering applies to normalized hostnames. For HomeLight entries this is often `www.homelight.com`.
+### Authentication
+- `DISABLE_AUTH` (default: false)
+- `GNOSIS_AUTH_URL` (default: http://gnosis-auth:5000)
 
-### Cache List Example
+### Crawling
+- `MAX_CONCURRENT_CRAWLS` (default: 5)
+- `CRAWL_TIMEOUT` (default: 30)
+- `ENABLE_JAVASCRIPT` (default: true)
+- `ENABLE_SCREENSHOTS` (default: false)
 
-```bash
-curl "http://localhost:8080/api/cache/list?domain=www.homelight.com&limit=25"
-```
+### Agent (Mode B)
+- `AGENT_ENABLED` (default: false)
+- `AGENT_MAX_STEPS` (default: 12)
+- `AGENT_MAX_WALL_TIME_MS` (default: 90000)
+- `AGENT_MAX_FAILURES` (default: 3)
+- `AGENT_ALLOWED_TOOLS` — comma-separated allowlist
+- `AGENT_ALLOWED_DOMAINS` — comma-separated allowlist
+- `AGENT_BLOCK_PRIVATE_RANGES` (default: true)
+- `AGENT_REDACT_SECRETS` (default: true)
 
-### Cache Doc Example
+### LLM Providers
+- `AGENT_PROVIDER` — openai | anthropic | ollama (default: openai)
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` (default: gpt-4.1-mini)
+- `ANTHROPIC_API_KEY`
+- `ANTHROPIC_MODEL` (default: claude-3-5-sonnet-latest)
+- `OLLAMA_BASE_URL` (default: http://localhost:11434)
+- `OLLAMA_MODEL` (default: llama3.1:8b-instruct)
 
-```bash
-curl "http://localhost:8080/api/cache/doc/b3350af605d76ae043ce581d"
-```
+### Ghost Protocol
+- `AGENT_GHOST_ENABLED` (default: false)
+- `AGENT_GHOST_AUTO_TRIGGER` (default: true)
+- `AGENT_GHOST_VISION_PROVIDER` — inherits from AGENT_PROVIDER
+- `AGENT_GHOST_MAX_IMAGE_WIDTH` (default: 1280)
+
+### Live Stream (Planned)
+- `BROWSER_POOL_SIZE` (default: 1)
+- `BROWSER_STREAM_ENABLED` (default: false)
+- `BROWSER_STREAM_QUALITY` (default: 25)
+- `BROWSER_STREAM_MAX_WIDTH` (default: 854)
+
+## Response Contract
+
+`POST /api/markdown` returns:
+
+`success`, `url`, `final_url`, `status_code`, `markdown`, `markdown_plain`, `content`, `render_mode`, `wait_strategy`, `timings_ms`, `blocked`, `block_reason`, `captcha_detected`, `http_error_family`, `body_char_count`, `body_word_count`, `content_quality`, `extractor_version`, `normalized_url`, `content_hash`
+
+### Content Quality
+
+- `blocked` — anti-bot/captcha/challenge
+- `empty` — very low signal
+- `minimal` — thin/error pages
+- `sufficient` — usable for summarization
+
+Do not summarize unless `content_quality == "sufficient"`.
 
 ### Error Format
 
-Non-200 responses use consistent JSON:
-
 ```json
-{
-  "error": "http_error|validation_error|internal_error",
-  "status": 400,
-  "details": {}
-}
+{"error": "http_error|validation_error|internal_error", "status": 400, "details": {}}
 ```
-
-### Docker Deployment
-
-1. **Local Docker:**
-   ```powershell
-   ./deploy.ps1 -Target local
-   ```
-
-2. **Google Cloud Run:**
-   ```powershell
-   ./deploy.ps1 -Target cloudrun -Tag v1.0.0
-   ```
-
-### Porter/Kubernetes Deployment (No Auth)
-
-For standalone deployments without gnosis-auth:
-
-1. **Copy Porter config:**
-   ```bash
-   cp .env.porter .env
-   ```
-
-2. **Deploy to your cluster:**
-   - The `DISABLE_AUTH=true` flag bypasses all authentication
-   - All endpoints become publicly accessible
-   - Recommended for internal/private clusters only
-
-3. **Build and deploy:**
-   ```bash
-   docker build -t gnosis-crawl:latest .
-   # Push to your registry and deploy via Porter/kubectl
-   ```
-
-### Cloud Storage (GCS) Setup
-
-For production deployments using Google Cloud Storage:
-
-1. **Create GCS bucket:**
-   ```bash
-   gsutil mb gs://gnosis-crawl-storage
-   ```
-
-2. **Set permissions:**
-   ```bash
-   # Grant service account write access
-   gsutil iam ch serviceAccount:YOUR-SA@PROJECT.iam.gserviceaccount.com:objectAdmin gs://gnosis-crawl-storage
-   ```
-
-3. **Use cloud config:**
-   ```bash
-   cp .env.cloud .env
-   ```
-
-4. **Update environment variables:**
-   ```bash
-   RUNNING_IN_CLOUD=true
-   GCS_BUCKET_NAME=gnosis-crawl-storage
-   GOOGLE_CLOUD_PROJECT=your-project-id  # Optional if running in GCP
-   ```
-
-5. **Install GCS client:**
-   ```bash
-   pip install google-cloud-storage
-   ```
-
-**Note:** When running in GCP (Cloud Run, GKE), authentication is automatic via service accounts. For local development, set `GOOGLE_APPLICATION_CREDENTIALS` to your service account key file.
-
-## Configuration
-
-Environment variables (see `.env.example`):
-
-### Server
-- `HOST` - Server host (default: 0.0.0.0)
-- `PORT` - Server port (default: 8080)  
-- `DEBUG` - Debug mode (default: false)
-
-### Storage
-- `STORAGE_PATH` - Local storage path (default: ./storage)
-- `RUNNING_IN_CLOUD` - Enable GCS cloud storage (default: false)
-- `GCS_BUCKET_NAME` - GCS bucket name (required if RUNNING_IN_CLOUD=true)
-- `GOOGLE_CLOUD_PROJECT` - GCP project ID (optional, auto-detected in GCP)
-
-### Authentication
-- `DISABLE_AUTH` - Disable all authentication (default: false) ⚠️
-- `GNOSIS_AUTH_URL` - Gnosis-auth service URL
-
-### Crawling
-- `MAX_CONCURRENT_CRAWLS` - Max concurrent crawls (default: 5)
-- `CRAWL_TIMEOUT` - Crawl timeout in seconds (default: 30)
-- `ENABLE_JAVASCRIPT` - Enable JS rendering (default: true)
-- `ENABLE_SCREENSHOTS` - Enable screenshots (default: false)
-
-### Agent (Mode B — internal micro-agent loop)
-- `AGENT_ENABLED` - Enable internal agent (default: false)
-- `AGENT_MAX_STEPS` - Max loop iterations (default: 12)
-- `AGENT_MAX_WALL_TIME_MS` - Max wall-clock time (default: 90000)
-- `AGENT_MAX_FAILURES` - Max tool failures before stop (default: 3)
-- `AGENT_ALLOWED_TOOLS` - Comma-separated tool allowlist (default: all)
-- `AGENT_ALLOWED_DOMAINS` - Comma-separated domain allowlist (default: all)
-- `AGENT_BLOCK_PRIVATE_RANGES` - Deny private/loopback IPs (default: true)
-- `AGENT_REDACT_SECRETS` - Redact secrets in logs/output (default: true)
-- `AGENT_PROVIDER` - LLM provider: openai, anthropic, ollama (default: openai)
-- `OPENAI_API_KEY` - OpenAI API key
-- `OPENAI_MODEL` - OpenAI model (default: gpt-4.1-mini)
-- `ANTHROPIC_API_KEY` - Anthropic API key
-- `ANTHROPIC_MODEL` - Anthropic model (default: claude-3-5-sonnet-latest)
-- `OLLAMA_BASE_URL` - Ollama server URL (default: http://localhost:11434)
-- `OLLAMA_MODEL` - Ollama model (default: llama3.1:8b-instruct)
-
-## Authentication
-
-### With gnosis-auth (default)
-
-All API endpoints require authentication via Bearer token. User email from the token is used for storage partitioning:
-
-```bash
-curl -H "Authorization: Bearer <token>" \
-     -X POST http://localhost:8080/api/crawl \
-     -H "Content-Type: application/json" \
-     -d '{"url": "https://example.com"}'
-```
-
-### Without authentication (DISABLE_AUTH=true)
-
-When auth is disabled (Porter/Kubernetes deployments), use `customer_id` for storage partitioning:
-
-```bash
-curl -X POST http://localhost:8080/api/crawl \
-     -H "Content-Type: application/json" \
-     -d '{
-       "url": "https://example.com",
-       "customer_id": "client-xyz-123"
-     }'
-```
-
-⚠️ **Warning:** Only use `DISABLE_AUTH=true` in trusted, internal environments.
-
-### Customer ID Support
-
-All crawl endpoints support an optional `customer_id` field for flexible storage partitioning:
-
-- **Priority**: `customer_id` (if provided) → authenticated user email → "anonymous"
-- **Use cases**:
-  - Unauthenticated API access (with `DISABLE_AUTH=true`)
-  - Multi-tenant storage partitioning even with auth
-  - Custom storage organization
-- **Storage path**: `storage/{hash(customer_id or user_email)}/{session_id}/`
-
-**Example with customer_id override:**
-```bash
-curl -H "Authorization: Bearer <token>" \
-     -X POST http://localhost:8080/api/crawl \
-     -H "Content-Type: application/json" \
-     -d '{
-       "url": "https://example.com",
-       "customer_id": "custom-partition-id",
-       "session_id": "my-session"
-     }'
-```
-
-**Session file access with customer_id:**
-```bash
-# List session files
-curl "http://localhost:8080/api/sessions/my-session/files?customer_id=client-xyz-123"
-
-# Get specific file
-curl "http://localhost:8080/api/sessions/my-session/file?path=results/abc123.json&customer_id=client-xyz-123"
-```
-
-## Architecture
-
-### Directory Structure
-```
-gnosis-crawl/
-├── app/
-│   ├── main.py              # FastAPI app entry point
-│   ├── config.py            # Environment-based configuration
-│   ├── auth.py              # HMAC JWT authentication + customer ID
-│   ├── models.py            # Pydantic request/response models
-│   ├── routes.py            # REST API routes
-│   ├── job_routes.py        # Job management routes
-│   ├── jobs.py              # Job processing
-│   ├── storage.py           # User-partitioned storage (local/GCS)
-│   ├── crawler.py           # Playwright-based crawling engine
-│   ├── markdown.py          # HTML to markdown conversion
-│   ├── browser.py           # Browser automation utilities
-│   ├── agent/               # Mode B: internal micro-agent loop
-│   │   ├── types.py         # State machine, ToolCall/Result, RunConfig
-│   │   ├── errors.py        # Typed error hierarchy
-│   │   ├── dispatcher.py    # Tool validation, timeout, retry
-│   │   ├── engine.py        # Bounded loop runner
-│   │   └── providers/       # LLM adapters (OpenAI, Anthropic, Ollama)
-│   ├── policy/              # Safety gates
-│   │   ├── domain.py        # Domain allowlist, private-range deny
-│   │   ├── gate.py          # Pre-tool / pre-fetch policy checks
-│   │   └── redaction.py     # Secret redaction
-│   ├── observability/       # Trace and replay
-│   └── tools/               # AHP tool registry and crawl tools
-│       ├── base.py          # BaseTool / FunctionTool / @tool decorator
-│       ├── tool_registry.py # Dynamic discovery and registration
-│       └── crawl_tools.py   # Crawling tool implementations
-├── tests/
-├── storage/
-├── Dockerfile
-├── docker-compose.yml
-├── deploy.ps1
-├── MASTER_PLAN.md           # Agent module architecture plan
-└── requirements.txt
-```
-
-### Storage Organization
-```
-storage/
-└── {customer_hash}/        # Customer partition (hash of customer_id or user_email)
-    └── {session_id}/       # Session partition
-        ├── metadata.json
-        └── results/
-            ├── {url_hash}.json
-            └── ...
-```
-
-**Customer Hash:** 12-character SHA256 hash provides:
-- Privacy (doesn't expose actual customer_id or email)
-- Consistent bucketing per customer
-- File system safety
-
-### Job System
-- **Local**: ThreadPoolExecutor for development
-- **Cloud**: Google Cloud Tasks for production  
-- **Status**: Derived from actual storage files
-- **Sessions**: User-scoped job grouping
 
 ## Development Status
 
 ### Phase 1: Core Infrastructure ✅
-- [x] Directory structure  
-- [x] FastAPI application
-- [x] Authentication integration
-- [x] Customer ID support (optional auth bypass)
-- [x] Storage service with customer partitioning
-- [x] API routes
-- [x] Docker configuration
-- [x] Deployment scripts
-
 ### Phase 2: Crawling ✅
-- [x] Browser automation (Playwright)
-- [x] HTML extraction
-- [x] Markdown generation  
-- [x] Batch processing
-- [x] Session management
+### Phase 3: Agent Module ✅
+- [x] Agent core — state machine, types, errors (W1)
+- [x] Unified tool contract — dispatcher with timeout/retry (W2)
+- [x] Policy gates — domain allowlist, private-range deny, redaction (W3)
+- [x] Observability — EventBus, TraceCollector, RunSummary persistence (W4)
+- [x] API wiring — `/api/agent/run`, `/api/agent/status`, JobType.AGENT_RUN (W5)
+- [x] Provider adapters — OpenAI, Anthropic, Ollama with fallback (W6)
+- [x] Config flags — agent, provider, ghost, stream settings (W7)
 
-### Phase 3: Agent Module (in progress)
-- [x] Agent core types and state machine (W1)
-- [x] Typed error hierarchy (W1)
-- [x] Tool dispatcher with timeout/retry (W2)
-- [x] Agent engine — bounded loop runner (W1)
-- [x] Domain allowlist and private-range deny (W3)
-- [x] Pre-tool / pre-fetch policy gates (W3)
-- [x] Secret redaction (W3)
-- [x] Agent config flags, disabled by default (W7)
-- [ ] Observability and trace persistence (W4)
-- [ ] API/job wiring for agent runs (W5)
-- [ ] LLM provider adapters — OpenAI, Anthropic, Ollama (W6)
+### Phase 4: Ghost Protocol (in progress)
+- [ ] Cloak-mode trigger detection (W8)
+- [ ] Screenshot capture pipeline (W8)
+- [ ] Vision extraction via Claude/GPT-4o (W8)
+- [ ] Fallback chain in dispatcher (W8)
+- [ ] Ghost tool for external callers (W8)
 
-See [MASTER_PLAN.md](MASTER_PLAN.md) for the full agent architecture.
+### Phase 5: Live Browser Stream (planned)
+- [ ] Persistent browser pool (W9)
+- [ ] CDP screencast relay (W9)
+- [ ] WebSocket endpoint (W9)
+- [ ] MJPEG fallback (W9)
 
-### Phase 4: Hardening
-- [ ] Test suite
+### Phase 6: Hardening
+- [ ] Comprehensive test suite
 - [ ] Error handling improvements
 - [ ] Monitoring and alerting
 - [ ] Performance optimization
 
-## Contributing
-
-This service follows the gnosis deployment standard:
-1. **Flat app structure** - All code in `/app` directory
-2. **Environment-based config** - `.env` pattern
-3. **PowerShell deployment** - `deploy.ps1` script
-4. **Docker-first** - Containerized deployment
-5. **Gnosis-auth integration** - Standard authentication
+See [MASTER_PLAN.md](MASTER_PLAN.md) for the full architecture plan.
 
 ## License
 
