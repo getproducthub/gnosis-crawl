@@ -38,10 +38,10 @@ CRAWL_SECRET_KEY = os.getenv("CRAWL_SECRET_KEY")
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
-    logger.info(f"Starting Gnosis-Crawl agentic service on {settings.host}:{settings.port}")
+    logger.info(f"Starting Grub Crawler service on {settings.host}:{settings.port}")
     logger.info(f"Cloud mode: {settings.is_cloud_environment()}")
     logger.info(f"Auth service: {settings.gnosis_auth_url}")
-    
+
     # Discover and register tools
     tool_registry = get_global_registry()
     try:
@@ -51,11 +51,28 @@ async def lifespan(app: FastAPI):
             logger.info(f"  - {schema['name']}: {schema['description']}")
     except Exception as e:
         logger.error(f"Failed to discover tools: {e}")
-    
+
+    # Start browser pool for live streaming (if enabled)
+    if settings.browser_stream_enabled:
+        try:
+            from app.browser_pool import get_browser_pool
+            pool = await get_browser_pool()
+            logger.info(f"Browser pool started (size={settings.browser_pool_size})")
+        except Exception as e:
+            logger.error(f"Failed to start browser pool: {e}")
+
     yield
-    
-    # Shutdown  
-    logger.info("Shutting down Gnosis-Crawl service")
+
+    # Shutdown
+    if settings.browser_stream_enabled:
+        try:
+            from app.browser_pool import shutdown_browser_pool
+            await shutdown_browser_pool()
+            logger.info("Browser pool shut down")
+        except Exception as e:
+            logger.error(f"Error shutting down browser pool: {e}")
+
+    logger.info("Shutting down Grub Crawler service")
 
 
 # Auth Dependency for AHP Tool Routes
@@ -156,6 +173,11 @@ app.add_middleware(
 app.include_router(router, prefix="/api")
 app.include_router(job_router)  # Job routes already have /api prefix
 app.include_router(agent_router)  # Agent routes already have /api/agent prefix
+
+# Live browser stream routes (conditional)
+if settings.browser_stream_enabled:
+    from app.stream import router as stream_router
+    app.include_router(stream_router)
 
 # Health check endpoint (no auth required) - MUST be before catch-all route
 @app.get("/health")
