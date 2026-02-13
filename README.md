@@ -256,6 +256,23 @@ Environment variables (see `.env.example`):
 - `ENABLE_JAVASCRIPT` - Enable JS rendering (default: true)
 - `ENABLE_SCREENSHOTS` - Enable screenshots (default: false)
 
+### Agent (Mode B — internal micro-agent loop)
+- `AGENT_ENABLED` - Enable internal agent (default: false)
+- `AGENT_MAX_STEPS` - Max loop iterations (default: 12)
+- `AGENT_MAX_WALL_TIME_MS` - Max wall-clock time (default: 90000)
+- `AGENT_MAX_FAILURES` - Max tool failures before stop (default: 3)
+- `AGENT_ALLOWED_TOOLS` - Comma-separated tool allowlist (default: all)
+- `AGENT_ALLOWED_DOMAINS` - Comma-separated domain allowlist (default: all)
+- `AGENT_BLOCK_PRIVATE_RANGES` - Deny private/loopback IPs (default: true)
+- `AGENT_REDACT_SECRETS` - Redact secrets in logs/output (default: true)
+- `AGENT_PROVIDER` - LLM provider: openai, anthropic, ollama (default: openai)
+- `OPENAI_API_KEY` - OpenAI API key
+- `OPENAI_MODEL` - OpenAI model (default: gpt-4.1-mini)
+- `ANTHROPIC_API_KEY` - Anthropic API key
+- `ANTHROPIC_MODEL` - Anthropic model (default: claude-3-5-sonnet-latest)
+- `OLLAMA_BASE_URL` - Ollama server URL (default: http://localhost:11434)
+- `OLLAMA_MODEL` - Ollama model (default: llama3.1:8b-instruct)
+
 ## Authentication
 
 ### With gnosis-auth (default)
@@ -321,20 +338,40 @@ curl "http://localhost:8080/api/sessions/my-session/file?path=results/abc123.jso
 ### Directory Structure
 ```
 gnosis-crawl/
-├── app/                 # Application code
-│   ├── main.py         # FastAPI app
-│   ├── config.py       # Configuration  
-│   ├── auth.py         # Authentication
-│   ├── models.py       # Data models
-│   ├── routes.py       # API routes
-│   ├── storage.py      # Storage service
-│   └── crawler.py      # Crawling logic
-├── tests/              # Test suite
-├── storage/            # Local storage
-├── Dockerfile          # Container config
-├── docker-compose.yml  # Local deployment
-├── deploy.ps1          # Deployment script
-└── requirements.txt    # Dependencies
+├── app/
+│   ├── main.py              # FastAPI app entry point
+│   ├── config.py            # Environment-based configuration
+│   ├── auth.py              # HMAC JWT authentication + customer ID
+│   ├── models.py            # Pydantic request/response models
+│   ├── routes.py            # REST API routes
+│   ├── job_routes.py        # Job management routes
+│   ├── jobs.py              # Job processing
+│   ├── storage.py           # User-partitioned storage (local/GCS)
+│   ├── crawler.py           # Playwright-based crawling engine
+│   ├── markdown.py          # HTML to markdown conversion
+│   ├── browser.py           # Browser automation utilities
+│   ├── agent/               # Mode B: internal micro-agent loop
+│   │   ├── types.py         # State machine, ToolCall/Result, RunConfig
+│   │   ├── errors.py        # Typed error hierarchy
+│   │   ├── dispatcher.py    # Tool validation, timeout, retry
+│   │   ├── engine.py        # Bounded loop runner
+│   │   └── providers/       # LLM adapters (OpenAI, Anthropic, Ollama)
+│   ├── policy/              # Safety gates
+│   │   ├── domain.py        # Domain allowlist, private-range deny
+│   │   ├── gate.py          # Pre-tool / pre-fetch policy checks
+│   │   └── redaction.py     # Secret redaction
+│   ├── observability/       # Trace and replay
+│   └── tools/               # AHP tool registry and crawl tools
+│       ├── base.py          # BaseTool / FunctionTool / @tool decorator
+│       ├── tool_registry.py # Dynamic discovery and registration
+│       └── crawl_tools.py   # Crawling tool implementations
+├── tests/
+├── storage/
+├── Dockerfile
+├── docker-compose.yml
+├── deploy.ps1
+├── MASTER_PLAN.md           # Agent module architecture plan
+└── requirements.txt
 ```
 
 ### Storage Organization
@@ -378,11 +415,26 @@ storage/
 - [x] Batch processing
 - [x] Session management
 
-### Phase 3: Testing & Production
+### Phase 3: Agent Module (in progress)
+- [x] Agent core types and state machine (W1)
+- [x] Typed error hierarchy (W1)
+- [x] Tool dispatcher with timeout/retry (W2)
+- [x] Agent engine — bounded loop runner (W1)
+- [x] Domain allowlist and private-range deny (W3)
+- [x] Pre-tool / pre-fetch policy gates (W3)
+- [x] Secret redaction (W3)
+- [x] Agent config flags, disabled by default (W7)
+- [ ] Observability and trace persistence (W4)
+- [ ] API/job wiring for agent runs (W5)
+- [ ] LLM provider adapters — OpenAI, Anthropic, Ollama (W6)
+
+See [MASTER_PLAN.md](MASTER_PLAN.md) for the full agent architecture.
+
+### Phase 4: Hardening
 - [ ] Test suite
-- [ ] Error handling
-- [ ] Monitoring
-- [ ] Documentation
+- [ ] Error handling improvements
+- [ ] Monitoring and alerting
+- [ ] Performance optimization
 
 ## Contributing
 
