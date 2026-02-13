@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     agent_ghost_max_image_width: int = 1280
     agent_ghost_max_retries: int = 1
 
+    # Live Browser Stream Configuration
+    browser_pool_size: int = 1
+    browser_stream_enabled: bool = False
+    browser_stream_quality: int = 25  # JPEG quality (1-100), lower = faster
+    browser_stream_max_width: int = 854
+    browser_stream_max_lease_seconds: int = 300  # max time a slot can be leased
+
     # LLM Provider Configuration
     agent_provider: str = "openai"  # openai | anthropic | ollama
     openai_api_key: Optional[str] = None

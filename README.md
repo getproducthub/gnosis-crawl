@@ -87,11 +87,13 @@ Grub Crawler gets dirty so you don't have to. It penetrates every layer of prote
 | `GET`  | `/api/sessions/{session_id}/results` | All crawl results | Live |
 | `GET`  | `/api/sessions/{session_id}/screenshots` | List screenshots | Live |
 
-### Live Stream (Planned)
+### Live Stream
 | Method | Path | Description | Status |
 |--------|------|-------------|--------|
-| `WS`   | `/stream/{session_id}` | WebSocket viewport stream | Planned |
-| `GET`  | `/stream/{session_id}/mjpeg` | MJPEG fallback stream | Planned |
+| `WS`   | `/stream/{session_id}` | WebSocket viewport stream | Live |
+| `GET`  | `/stream/{session_id}/mjpeg` | MJPEG fallback stream | Live |
+| `GET`  | `/stream/{session_id}/status` | Stream session status | Live |
+| `GET`  | `/stream/pool/status` | Browser pool status | Live |
 
 ### System
 | Method | Path | Description | Status |
@@ -171,8 +173,8 @@ The MCP bridge exposes all capabilities to any MCP-compatible host:
 | `crawler.py` | Playwright crawling engine | Done |
 | `markdown.py` | HTML to markdown conversion | Done |
 | `browser.py` | Browser automation utilities | Done |
-| `browser_pool.py` | Persistent Chromium pool for streaming | Planned |
-| `stream.py` | CDP screencast -> WebSocket/MJPEG relay | Planned |
+| `browser_pool.py` | Persistent Chromium pool with lease/return pattern | Done |
+| `stream.py` | CDP screencast → WebSocket/MJPEG relay + interactive commands | Done |
 
 ## Agent State Machine
 
@@ -290,11 +292,12 @@ curl -X POST http://localhost:8080/api/agent/run \
 - `AGENT_GHOST_VISION_PROVIDER` — inherits from AGENT_PROVIDER
 - `AGENT_GHOST_MAX_IMAGE_WIDTH` (default: 1280)
 
-### Live Stream (Planned)
+### Live Stream
 - `BROWSER_POOL_SIZE` (default: 1)
 - `BROWSER_STREAM_ENABLED` (default: false)
-- `BROWSER_STREAM_QUALITY` (default: 25)
+- `BROWSER_STREAM_QUALITY` (default: 25) — JPEG quality 1-100
 - `BROWSER_STREAM_MAX_WIDTH` (default: 854)
+- `BROWSER_STREAM_MAX_LEASE_SECONDS` (default: 300)
 
 ## Response Contract
 
@@ -338,11 +341,12 @@ Do not summarize unless `content_quality == "sufficient"`.
 - [x] Ghost tool for external callers (W8)
 - [x] Ghost MCP tool + REST endpoint (W8)
 
-### Phase 5: Live Browser Stream (planned)
-- [ ] Persistent browser pool (W9)
-- [ ] CDP screencast relay (W9)
-- [ ] WebSocket endpoint (W9)
-- [ ] MJPEG fallback (W9)
+### Phase 5: Live Browser Stream ✅
+- [x] Persistent browser pool with lease/return (W9)
+- [x] CDP screencast relay (W9)
+- [x] WebSocket endpoint with interactive commands (W9)
+- [x] MJPEG fallback stream (W9)
+- [x] Stream status + pool status endpoints (W9)
 
 ### Phase 6: Hardening
 - [ ] Comprehensive test suite
