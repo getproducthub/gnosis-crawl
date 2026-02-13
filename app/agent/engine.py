@@ -4,11 +4,17 @@ The engine implements:
   plan(ctx)  -> ask the LLM for the next action
   step(ctx)  -> execute that action (tool calls or respond)
   run_task() -> outer loop with stop-condition enforcement every iteration
+
+Observability:
+  Every run creates an EventBus + TraceCollector. Events are emitted at
+  each lifecycle point so listeners (loggers, metrics, trace persistence)
+  can observe the run without coupling to engine internals.
 """
 
 from __future__ import annotations
 
 import logging
+import time
 from typing import Optional, Protocol
 
 from app.agent.types import (
@@ -26,6 +32,17 @@ from app.agent.types import (
 )
 from app.agent.errors import PolicyDeniedError, ProviderError, StopConditionError
 from app.agent.dispatcher import Dispatcher
+from app.observability.events import (
+    EventBus,
+    PolicyDeniedEvent,
+    RunEndEvent,
+    RunStartEvent,
+    StepEndEvent,
+    StepStartEvent,
+    ToolDispatchEvent,
+    ToolResultEvent,
+)
+from app.observability.trace import TraceCollector, RunSummary
 from app.policy.gate import check_tool_call, PolicyVerdict
 
 logger = logging.getLogger(__name__)
@@ -70,10 +87,24 @@ class AgentEngine:
         self,
         task: str,
         config: Optional[RunConfig] = None,
-    ) -> RunResult:
-        """Execute a bounded agent loop and return the final result."""
+    ) -> tuple[RunResult, RunSummary]:
+        """Execute a bounded agent loop.
+
+        Returns:
+            (RunResult, RunSummary) — the result and the full trace summary.
+        """
         config = config or RunConfig()
         ctx = RunContext(task=task, config=config)
+
+        # --- set up observability ---
+        bus = EventBus()
+        collector = TraceCollector(
+            run_id=ctx.run_id,
+            redact=config.redact_secrets,
+        )
+        collector.attach(bus)
+
+        bus.emit(RunStartEvent(run_id=ctx.run_id, task=task, config=config))
 
         # Seed the conversation with the task
         ctx.messages.append({"role": "user", "content": task})
@@ -84,27 +115,35 @@ class AgentEngine:
             stop = self._check_stop(ctx)
             if stop is not None:
                 ctx.state = RunState.STOP
-                return self._finalize(ctx, stop)
+                result = self._finalize(ctx, stop)
+                return self._emit_end(bus, collector, result, stop)
 
             try:
-                step = await self._tick(ctx)
+                step = await self._tick(ctx, bus)
             except StopConditionError as exc:
                 ctx.state = RunState.STOP
-                return self._finalize(ctx, StopReason(exc.code) if exc.code in StopReason.__members__ else StopReason.COMPLETED, error=str(exc))
+                sr = StopReason(exc.code) if exc.code in StopReason.__members__ else StopReason.COMPLETED
+                result = self._finalize(ctx, sr, error=str(exc))
+                return self._emit_end(bus, collector, result, sr)
             except Exception as exc:
                 logger.error("Engine tick failed: %s", exc, exc_info=True)
                 ctx.state = RunState.ERROR
-                return self._finalize(ctx, StopReason.COMPLETED, error=str(exc))
+                result = self._finalize(ctx, StopReason.COMPLETED, error=str(exc))
+                return self._emit_end(bus, collector, result, StopReason.COMPLETED, error=str(exc))
 
-        return self._finalize(ctx, StopReason.COMPLETED)
+        result = self._finalize(ctx, StopReason.COMPLETED)
+        return self._emit_end(bus, collector, result, StopReason.COMPLETED)
 
     # ------------------------------------------------------------------
     # Single tick: plan → execute → observe
     # ------------------------------------------------------------------
 
-    async def _tick(self, ctx: RunContext) -> StepResult:
+    async def _tick(self, ctx: RunContext, bus: EventBus) -> StepResult:
         """One full plan→execute→observe cycle."""
         ctx.step += 1
+        step_start = time.monotonic()
+
+        bus.emit(StepStartEvent(run_id=ctx.run_id, step_id=ctx.step, state=RunState.PLAN))
 
         # PLAN: ask the LLM
         ctx.state = RunState.PLAN
@@ -121,6 +160,8 @@ class AgentEngine:
             ctx.consecutive_no_ops = 0
             trace = StepTrace(run_id=ctx.run_id, step_id=ctx.step, state=RunState.RESPOND)
             ctx.trace.append(trace)
+            duration = int((time.monotonic() - step_start) * 1000)
+            bus.emit(StepEndEvent(run_id=ctx.run_id, step_id=ctx.step, duration_ms=duration))
             ctx.state = RunState.STOP
             return StepResult(action=action, stop_reason=StopReason.COMPLETED)
 
@@ -128,6 +169,8 @@ class AgentEngine:
         if isinstance(action, ToolCalls):
             if not action.calls:
                 ctx.consecutive_no_ops += 1
+                duration = int((time.monotonic() - step_start) * 1000)
+                bus.emit(StepEndEvent(run_id=ctx.run_id, step_id=ctx.step, duration_ms=duration))
                 return StepResult(action=action)
 
             ctx.consecutive_no_ops = 0
@@ -162,11 +205,29 @@ class AgentEngine:
                         status="policy_denied",
                         policy_flags=verdict.flags,
                     ))
+                    bus.emit(PolicyDeniedEvent(
+                        run_id=ctx.run_id,
+                        step_id=ctx.step,
+                        tool_name=call.name,
+                        reason=verdict.reason or "",
+                        flags=verdict.flags or [],
+                    ))
                     continue
 
                 # Dispatch
+                bus.emit(ToolDispatchEvent(
+                    run_id=ctx.run_id,
+                    step_id=ctx.step,
+                    tool_call=call,
+                ))
                 result = await self.dispatcher.dispatch(call)
                 results.append(result)
+
+                bus.emit(ToolResultEvent(
+                    run_id=ctx.run_id,
+                    step_id=ctx.step,
+                    tool_result=result,
+                ))
 
                 status = "ok" if result.ok else (result.error_code or "error")
                 ctx.trace.append(StepTrace(
@@ -192,6 +253,8 @@ class AgentEngine:
                     "content": r.payload if r.ok else f"ERROR [{r.error_code}]: {r.error_message}",
                 })
 
+            duration = int((time.monotonic() - step_start) * 1000)
+            bus.emit(StepEndEvent(run_id=ctx.run_id, step_id=ctx.step, duration_ms=duration))
             return StepResult(action=action, tool_results=results)
 
         # Shouldn't reach here
@@ -241,3 +304,23 @@ class AgentEngine:
             wall_time_ms=ctx.elapsed_ms,
             error=error,
         )
+
+    @staticmethod
+    def _emit_end(
+        bus: EventBus,
+        collector: TraceCollector,
+        result: RunResult,
+        stop_reason: StopReason,
+        error: Optional[str] = None,
+    ) -> tuple[RunResult, RunSummary]:
+        """Emit RunEndEvent, finalize the collector, and return both."""
+        bus.emit(RunEndEvent(
+            run_id=result.run_id,
+            success=result.success,
+            stop_reason=stop_reason,
+            steps=result.steps,
+            wall_time_ms=result.wall_time_ms,
+            error=error or result.error,
+        ))
+        summary = collector.finalize(result)
+        return result, summary
