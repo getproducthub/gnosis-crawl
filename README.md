@@ -1,10 +1,10 @@
-# Gnosis-Crawl
+# Grub Crawler
 
 The world's only agentic web crawler. Built using the brain of a human that knows about distributed crawling architectures. A dual-mode crawling service that operates as both a traditional API tool and an autonomous agent capable of multi-step browsing, extraction, and reasoning over live web content.
 
 ## Overview
 
-Gnosis-Crawl goes beyond fetch-and-parse. It combines a production-grade crawling API with a bounded internal agent loop that can plan, execute, and observe across multiple pages autonomously — all under strict policy controls, typed error contracts, and replayable traces.
+Grub Crawler goes beyond fetch-and-parse. It combines a production-grade crawling API with a bounded internal agent loop that can plan, execute, and observe across multiple pages autonomously — all under strict policy controls, typed error contracts, and replayable traces.
 
 - **Mode A (External)** - First-class tool endpoints for agents and orchestrators
 - **Mode B (Internal)** - Opt-in autonomous agent loop with LLM-driven planning
@@ -32,7 +32,7 @@ Gnosis-Crawl goes beyond fetch-and-parse. It combines a production-grade crawlin
 |--------|------|-------------|--------|
 | `POST` | `/api/agent/run` | Submit task to autonomous agent loop | Live |
 | `GET`  | `/api/agent/status/{run_id}` | Check agent run status / load trace | Live |
-| `POST` | `/api/agent/ghost` | Ghost Protocol: screenshot + vision extract | Planned |
+| `POST` | `/api/agent/ghost` | Ghost Protocol: screenshot + vision extract | Live |
 
 ### Job Management
 | Method | Path | Description | Status |
@@ -75,7 +75,7 @@ Gnosis-Crawl goes beyond fetch-and-parse. It combines a production-grade crawlin
 | `GET`  | `/tools` | List registered AHP tools | Live |
 | `GET`  | `/{tool_name}` | Execute AHP tool (catch-all) | Live |
 
-## MCP Tools (gnosis-crawl.py)
+## MCP Tools (grub-crawl.py)
 
 The MCP bridge exposes all capabilities to any MCP-compatible host:
 
@@ -93,6 +93,7 @@ The MCP bridge exposes all capabilities to any MCP-compatible host:
 | `crawl_remote_cache_doc` | Fetch remote cached document | Live |
 | `agent_run` | Submit task to autonomous agent (Mode B) | Live |
 | `agent_status` | Check agent run status | Live |
+| `ghost_extract` | Ghost Protocol: screenshot + vision AI extraction | Live |
 | `set_auth_token` | Save auth token to .wraithenv | Live |
 | `crawl_status` | Report configuration and connection | Live |
 
@@ -105,7 +106,7 @@ The MCP bridge exposes all capabilities to any MCP-compatible host:
 | `errors.py` | Typed errors: `validation_error`, `policy_denied`, `tool_timeout`, `tool_unavailable`, `execution_error`, `provider_error`, `stop_condition` | Done |
 | `dispatcher.py` | Tool validation, timeout enforcement (30s), retry (1x), typed error normalization | Done |
 | `engine.py` | Bounded loop: `plan -> execute -> observe -> stop`. EventBus integration. Returns `(RunResult, RunSummary)` | Done |
-| `ghost.py` | Ghost Protocol: screenshot capture, vision extraction, cloak-mode trigger | Planned |
+| `ghost.py` | Ghost Protocol: block detection, screenshot capture, vision extraction, auto-trigger | Done |
 
 ### Provider Adapters (`app/agent/providers/`)
 | File | Purpose | Status |
@@ -187,7 +188,7 @@ Requires `AGENT_GHOST_ENABLED=true`. Auto-triggers on detected blocks when `AGEN
 
 ```bash
 git clone <repo>
-cd gnosis-crawl
+cd grub-crawl
 cp .env.example .env
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
@@ -304,12 +305,13 @@ Do not summarize unless `content_quality == "sufficient"`.
 - [x] Provider adapters — OpenAI, Anthropic, Ollama with fallback (W6)
 - [x] Config flags — agent, provider, ghost, stream settings (W7)
 
-### Phase 4: Ghost Protocol (in progress)
-- [ ] Cloak-mode trigger detection (W8)
-- [ ] Screenshot capture pipeline (W8)
-- [ ] Vision extraction via Claude/GPT-4o (W8)
-- [ ] Fallback chain in dispatcher (W8)
-- [ ] Ghost tool for external callers (W8)
+### Phase 4: Ghost Protocol ✅
+- [x] Cloak-mode trigger detection (W8)
+- [x] Screenshot capture pipeline (W8)
+- [x] Vision extraction via Claude/GPT-4o (W8)
+- [x] Fallback chain in engine (W8)
+- [x] Ghost tool for external callers (W8)
+- [x] Ghost MCP tool + REST endpoint (W8)
 
 ### Phase 5: Live Browser Stream (planned)
 - [ ] Persistent browser pool (W9)
@@ -327,4 +329,4 @@ See [MASTER_PLAN.md](MASTER_PLAN.md) for the full architecture plan.
 
 ## License
 
-Gnosis Project License
+Grub Crawler Project License
