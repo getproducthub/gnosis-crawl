@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     agent_redact_secrets: bool = True
     agent_persist_raw_html: bool = False
 
+    # Ghost Protocol Configuration (vision-based anti-bot fallback)
+    agent_ghost_enabled: bool = False
+    agent_ghost_auto_trigger: bool = True
+    agent_ghost_vision_provider: str = ""  # inherits from agent_provider if empty
+    agent_ghost_max_image_width: int = 1280
+    agent_ghost_max_retries: int = 1
+
     # LLM Provider Configuration
     agent_provider: str = "openai"  # openai | anthropic | ollama
     openai_api_key: Optional[str] = None

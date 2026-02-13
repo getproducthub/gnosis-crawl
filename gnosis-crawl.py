@@ -19,6 +19,7 @@ Tools:
   - download_file: download files (PDFs, etc.) through the crawler
   - agent_run: submit a multi-step task to the autonomous agent (Mode B)
   - agent_status: check status of a running agent task
+  - ghost_extract: Ghost Protocol — screenshot + vision AI extraction (anti-bot bypass)
   - set_auth_token: save Wraith API token to .wraithenv (optional)
   - crawl_status: report configuration (base URL, token presence)
   - crawl_validate: validate whether crawled text is usable
@@ -1467,6 +1468,64 @@ async def agent_status(
                     return {
                         "success": False,
                         "error": f"Run '{run_id}' not found or agent endpoint unavailable",
+                        "status": resp.status,
+                    }
+                return {"success": False, "error": f"{resp.status}: {text}", "status": resp.status}
+    except Exception as e:
+        return {"success": False, "error": str(e), "endpoint": endpoint}
+
+
+@mcp.tool()
+async def ghost_extract(
+    url: str,
+    server_url: Optional[str] = None,
+    timeout: int = 60,
+    prompt: Optional[str] = None,
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    """
+    Ghost Protocol: screenshot a URL and extract content via vision AI.
+
+    Bypasses DOM-based anti-bot detection (Cloudflare, CAPTCHAs, challenge pages)
+    by capturing a screenshot of the rendered page and extracting text content
+    from the pixels using Claude or GPT-4o vision.
+
+    Use this when a normal crawl returns blocked/empty content.
+
+    Args:
+        url: The URL to ghost-extract
+        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        timeout: HTTP timeout seconds (default 60 — ghost is slower than normal crawl)
+        prompt: Optional custom vision extraction prompt
+        ctx: MCP context (optional)
+
+    Returns:
+        Dict with extracted content, render_mode="ghost", timing metadata
+    """
+    if not url or not url.strip():
+        return {"success": False, "error": "url is required"}
+
+    base = _resolve_base_url(server_url)
+    endpoint = f"{base}/api/agent/ghost"
+
+    payload: Dict[str, Any] = {"url": url.strip(), "timeout": min(timeout, 120)}
+    if prompt:
+        payload["prompt"] = prompt
+
+    try:
+        timeout_cfg = aiohttp.ClientTimeout(total=max(10, int(timeout) + 10))
+        async with aiohttp.ClientSession(timeout=timeout_cfg) as session:
+            async with session.post(endpoint, json=payload, headers=_auth_headers()) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if isinstance(data, dict):
+                        data.setdefault("success", True)
+                    return data
+                text = await resp.text()
+                if resp.status == 503:
+                    return {
+                        "success": False,
+                        "error": "Ghost Protocol is disabled on the server. Set AGENT_GHOST_ENABLED=true.",
                         "status": resp.status,
                     }
                 return {"success": False, "error": f"{resp.status}: {text}", "status": resp.status}

@@ -164,6 +164,69 @@ async def batch(
         }
 
 
+@tool(description="Ghost Protocol: screenshot a URL and extract content via vision AI, bypassing anti-bot blocks")
+async def ghost_extract(
+    url: str,
+    timeout: int = 30,
+) -> Dict[str, Any]:
+    """Ghost Protocol: take a screenshot of a URL and extract content using vision AI.
+
+    Useful when standard crawling is blocked by anti-bot measures (Cloudflare,
+    CAPTCHAs, challenge pages). Captures the page visually and reads content
+    from the rendered pixels using Claude or GPT-4o vision.
+
+    Args:
+        url: The URL to ghost-extract
+        timeout: Navigation timeout in seconds (default: 30)
+
+    Returns:
+        Dict with extracted content, render_mode, and timing metadata
+    """
+    from app.config import settings
+    from app.agent.ghost import run_ghost_protocol, create_ghost_provider
+
+    if not settings.agent_ghost_enabled:
+        return {
+            "url": url,
+            "error": "Ghost Protocol is disabled. Set AGENT_GHOST_ENABLED=true to enable.",
+            "render_mode": "ghost",
+            "success": False,
+        }
+
+    try:
+        provider = create_ghost_provider()
+        result = await run_ghost_protocol(
+            url,
+            provider=provider,
+            max_width=settings.agent_ghost_max_image_width,
+            timeout=timeout,
+        )
+
+        return {
+            "url": result.url,
+            "success": result.success,
+            "content": result.content,
+            "render_mode": result.render_mode,
+            "block_signal": result.block_signal,
+            "block_reason": result.block_reason,
+            "capture_ms": result.capture_ms,
+            "extraction_ms": result.extraction_ms,
+            "total_ms": result.total_ms,
+            "provider": result.provider,
+            "blocked_content": result.blocked_content,
+            "error": result.error,
+        }
+
+    except Exception as e:
+        logger.error(f"Ghost extract failed for {url}: {e}", exc_info=True)
+        return {
+            "url": url,
+            "error": str(e),
+            "render_mode": "ghost",
+            "success": False,
+        }
+
+
 @tool(description="Get information about the crawler service")
 async def crawler_info() -> Dict[str, Any]:
     """Get information about the crawler service capabilities.
