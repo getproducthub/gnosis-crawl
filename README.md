@@ -1,19 +1,44 @@
-# Grub Crawler
+<div align="center">
 
-The world's only agentic web crawler. Built using the brain of a human that knows about distributed crawling architectures. A dual-mode crawling service that operates as both a traditional API tool and an autonomous agent capable of multi-step browsing, extraction, and reasoning over live web content.
+<img src="https://img.shields.io/badge/🪱-GRUB_CRAWLER-black?style=for-the-badge&labelColor=0d1117" alt="Grub Crawler" />
 
-## Overview
+<br/>
 
-Grub Crawler goes beyond fetch-and-parse. It combines a production-grade crawling API with a bounded internal agent loop that can plan, execute, and observe across multiple pages autonomously — all under strict policy controls, typed error contracts, and replayable traces.
+[![License](https://img.shields.io/badge/license-proprietary-red?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Playwright](https://img.shields.io/badge/Playwright-latest-2EAD33?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev)
+[![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet?style=flat-square)](https://modelcontextprotocol.io)
+[![Ghost Protocol](https://img.shields.io/badge/Ghost_Protocol-active-ff6b6b?style=flat-square)](#ghost-protocol)
 
-- **Mode A (External)** - First-class tool endpoints for agents and orchestrators
-- **Mode B (Internal)** - Opt-in autonomous agent loop with LLM-driven planning
-- **Ghost Protocol** - Vision-based fallback: when anti-bot blocks DOM scraping, screenshots the page and extracts content via Claude/GPT-4o vision
-- **Live Browser Stream** - Real-time viewport streaming over WebSocket/MJPEG (planned)
-- **Multi-provider LLM** - OpenAI, Anthropic, and Ollama with automatic fallback rotation
-- **Policy-gated execution** - Domain allowlists, private-range deny, secret redaction
-- **Replayable traces** - Every agent run produces a JSON trace for debugging and replay
-- **User partitioned storage** - Secure, isolated data per customer (local or GCS)
+<br/>
+
+**The world's only agentic web crawler.**
+
+*Built using the brain of a human that knows about distributed crawling architectures.*
+
+<br/>
+
+<a href="#api-endpoints">Endpoints</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
+
+---
+
+Grub Crawler gets dirty so you don't have to. It penetrates every layer of protection — Cloudflare, CAPTCHAs, JavaScript walls — fingers deep in the DOM until it finds what it came for. When the front door's locked, Ghost Protocol slips in the back, takes pictures of everything, and lets the AI read it naked. Multi-provider? Oh yeah — it'll ride OpenAI, Anthropic, and Ollama all in the same session. No safeword. No cooldown. Just raw, unfiltered content extraction that leaves every page fully exposed and dripping with markdown.
+
+---
+
+</div>
+
+## Why Grub
+
+| | Traditional Crawlers | **Grub Crawler** |
+|---|---|---|
+| Anti-bot bypass | ❌ | ✅ Ghost Protocol (vision AI) |
+| Autonomous browsing | ❌ | ✅ Agent loop with planning |
+| Multi-page reasoning | ❌ | ✅ Bounded state machine |
+| LLM fallback rotation | ❌ | ✅ OpenAI / Anthropic / Ollama |
+| Policy enforcement | ❌ | ✅ Domain gates, secret redaction |
+| Replayable traces | ❌ | ✅ Full JSON trace per run |
 
 ## API Endpoints
 
