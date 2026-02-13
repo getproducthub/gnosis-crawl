@@ -32,6 +32,13 @@ from app.agent.types import (
 )
 from app.agent.errors import PolicyDeniedError, ProviderError, StopConditionError
 from app.agent.dispatcher import Dispatcher
+from app.agent.ghost import (
+    detect_block,
+    should_trigger_ghost,
+    run_ghost_protocol,
+    create_ghost_provider,
+    GhostResult,
+)
 from app.observability.events import (
     EventBus,
     PolicyDeniedEvent,
@@ -244,6 +251,13 @@ class AgentEngine:
                 if not result.ok:
                     ctx.failures += 1
 
+                # Ghost Protocol fallback: if a crawl tool returned blocked
+                # content, try vision-based extraction automatically.
+                if result.ok and self._is_blocked_crawl_result(result):
+                    ghost_result = await self._try_ghost_fallback(call, result, ctx, bus)
+                    if ghost_result is not None:
+                        results[-1] = ghost_result  # replace the blocked result
+
             # OBSERVE: feed results back into conversation
             ctx.state = RunState.OBSERVE
             for r in results:
@@ -259,6 +273,127 @@ class AgentEngine:
 
         # Shouldn't reach here
         raise ProviderError(f"Unknown action type: {type(action)}")
+
+    # ------------------------------------------------------------------
+    # Ghost Protocol fallback
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _is_blocked_crawl_result(result: ToolResult) -> bool:
+        """Check if a successful tool result contains blocked/anti-bot content."""
+        if not result.ok or not isinstance(result.payload, dict):
+            return False
+        payload = result.payload
+        # Check the crawl result's block indicators
+        if payload.get("blocked") is True:
+            return True
+        if payload.get("content_quality") == "blocked":
+            return True
+        # Check for very thin content that might be a challenge page
+        if (
+            payload.get("body_word_count", 999) < 30
+            and payload.get("body_char_count", 999) < 200
+            and payload.get("html")
+        ):
+            return True
+        return False
+
+    async def _try_ghost_fallback(
+        self,
+        call: "ToolCall",
+        original_result: ToolResult,
+        ctx: RunContext,
+        bus: EventBus,
+    ) -> Optional[ToolResult]:
+        """Attempt Ghost Protocol vision extraction for a blocked crawl result.
+
+        Returns a replacement ToolResult on success, or None to keep the original.
+        """
+        from app.config import settings
+
+        if not should_trigger_ghost(
+            detect_block(
+                html=str((original_result.payload or {}).get("html", "")),
+                markdown=str((original_result.payload or {}).get("markdown", "")),
+                status_code=(original_result.payload or {}).get("status_code"),
+                body_char_count=(original_result.payload or {}).get("body_char_count", 0),
+                body_word_count=(original_result.payload or {}).get("body_word_count", 0),
+                content_quality=str((original_result.payload or {}).get("content_quality", "")),
+            ),
+            ghost_enabled=settings.agent_ghost_enabled,
+            auto_trigger=settings.agent_ghost_auto_trigger,
+        ):
+            return None
+
+        # Extract URL from the tool call args or result
+        url = call.args.get("url") or (original_result.payload or {}).get("url")
+        if not url:
+            return None
+
+        logger.info("Ghost Protocol auto-triggered for blocked URL: %s", url)
+
+        bus.emit(ToolDispatchEvent(
+            run_id=ctx.run_id,
+            step_id=ctx.step,
+            tool_call=ToolCall(id=f"{call.id}_ghost", name="ghost_extract", args={"url": url}),
+        ))
+
+        try:
+            provider = create_ghost_provider()
+            ghost_result = await run_ghost_protocol(
+                url,
+                provider=provider,
+                max_width=settings.agent_ghost_max_image_width,
+                timeout=30,
+            )
+
+            if ghost_result.success:
+                # Merge ghost content into a new ToolResult
+                ghost_payload = dict(original_result.payload or {})
+                ghost_payload["markdown"] = ghost_result.content
+                ghost_payload["content"] = ghost_result.content
+                ghost_payload["render_mode"] = "ghost"
+                ghost_payload["ghost_capture_ms"] = ghost_result.capture_ms
+                ghost_payload["ghost_extraction_ms"] = ghost_result.extraction_ms
+                ghost_payload["ghost_provider"] = ghost_result.provider
+                ghost_payload["content_quality"] = "sufficient"
+                ghost_payload["blocked"] = False  # unblock — we got content
+
+                replacement = ToolResult(
+                    tool_call_id=original_result.tool_call_id,
+                    ok=True,
+                    payload=ghost_payload,
+                    duration_ms=original_result.duration_ms + ghost_result.total_ms,
+                )
+
+                bus.emit(ToolResultEvent(
+                    run_id=ctx.run_id,
+                    step_id=ctx.step,
+                    tool_result=replacement,
+                ))
+
+                ctx.trace.append(StepTrace(
+                    run_id=ctx.run_id,
+                    step_id=ctx.step,
+                    state=RunState.EXECUTE_TOOL,
+                    tool_name="ghost_extract",
+                    duration_ms=ghost_result.total_ms,
+                    status="ok",
+                ))
+
+                logger.info(
+                    "Ghost Protocol succeeded for %s: %d chars extracted",
+                    url, len(ghost_result.content),
+                )
+                return replacement
+
+            else:
+                logger.warning("Ghost Protocol failed for %s: %s", url, ghost_result.error)
+                return None
+
+        except Exception as exc:
+            logger.error("Ghost Protocol error for %s: %s", url, exc, exc_info=True)
+            return None
 
     # ------------------------------------------------------------------
     # Stop-condition checks (MASTER_PLAN §W1)

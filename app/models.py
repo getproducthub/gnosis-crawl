@@ -277,3 +277,28 @@ class AgentStatusResponse(BaseModel):
     steps: Optional[int] = None
     wall_time_ms: Optional[int] = None
     error: Optional[str] = None
+
+
+# Ghost Protocol Models
+
+class GhostExtractRequest(BaseModel):
+    """Request for Ghost Protocol vision extraction."""
+    url: str = Field(..., min_length=1)
+    timeout: int = Field(default=30, ge=5, le=120)
+    prompt: Optional[str] = None
+
+
+class GhostExtractResponse(BaseModel):
+    """Response from Ghost Protocol extraction."""
+    success: bool
+    url: str
+    content: Optional[str] = None
+    render_mode: str = "ghost"
+    block_signal: Optional[str] = None
+    block_reason: Optional[str] = None
+    capture_ms: int = 0
+    extraction_ms: int = 0
+    total_ms: int = 0
+    provider: Optional[str] = None
+    blocked_content: bool = False
+    error: Optional[str] = None

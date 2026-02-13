@@ -2,6 +2,7 @@
 
 POST /api/agent/run      — submit a task to the internal agent loop
 GET  /api/agent/status/{run_id} — check status of a run (via persisted trace)
+POST /api/agent/ghost    — Ghost Protocol: screenshot + vision extract
 
 Returns 503 when AGENT_ENABLED is false.
 """
@@ -14,7 +15,10 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.routes import get_optional_user_email
 from app.config import settings
-from app.models import AgentRunRequest, AgentRunResponse, AgentStatusResponse, AgentTraceEntry
+from app.models import (
+    AgentRunRequest, AgentRunResponse, AgentStatusResponse, AgentTraceEntry,
+    GhostExtractRequest, GhostExtractResponse,
+)
 from app.storage import CrawlStorageService
 
 logger = logging.getLogger(__name__)
@@ -136,4 +140,58 @@ async def agent_status(
         steps=summary.steps,
         wall_time_ms=summary.wall_time_ms,
         error=summary.error,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/agent/ghost — Ghost Protocol: screenshot + vision extract
+# ---------------------------------------------------------------------------
+
+def _require_ghost_enabled():
+    """Dependency that gates the ghost endpoint."""
+    if not settings.agent_ghost_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="Ghost Protocol is disabled. Set AGENT_GHOST_ENABLED=true to enable.",
+        )
+
+
+@router.post("/ghost", response_model=GhostExtractResponse, dependencies=[Depends(_require_ghost_enabled)])
+async def agent_ghost(request: GhostExtractRequest):
+    """Ghost Protocol: screenshot a URL and extract content via vision AI.
+
+    Bypasses DOM-based anti-bot detection by reading rendered pixels instead.
+    """
+    from app.agent.ghost import run_ghost_protocol, create_ghost_provider, GHOST_EXTRACTION_PROMPT
+
+    try:
+        provider = create_ghost_provider()
+    except Exception as exc:
+        logger.error("Failed to create ghost provider: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to initialize vision provider: {exc}",
+        )
+
+    result = await run_ghost_protocol(
+        request.url,
+        provider=provider,
+        max_width=settings.agent_ghost_max_image_width,
+        timeout=request.timeout,
+        prompt=request.prompt or GHOST_EXTRACTION_PROMPT,
+    )
+
+    return GhostExtractResponse(
+        success=result.success,
+        url=result.url,
+        content=result.content if result.success else None,
+        render_mode=result.render_mode,
+        block_signal=result.block_signal,
+        block_reason=result.block_reason,
+        capture_ms=result.capture_ms,
+        extraction_ms=result.extraction_ms,
+        total_ms=result.total_ms,
+        provider=result.provider,
+        blocked_content=result.blocked_content,
+        error=result.error,
     )
