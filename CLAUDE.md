@@ -278,6 +278,7 @@ Currently NO validation on customer_id format. Consider adding:
 ## Contact & References
 
 - **Documentation**: README.md
+- **Master Plan**: MASTER_PLAN.md
 - **Customer ID Details**: CUSTOMER_ID_IMPLEMENTATION.md
 - **Remote Testing**: test_remote_api.py
 - **Gnosis Standards**: Follows gnosis deployment patterns
