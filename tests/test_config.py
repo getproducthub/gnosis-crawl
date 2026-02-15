@@ -1,0 +1,112 @@
+"""Unit tests for app.config — Settings and RunConfig builder."""
+
+import pytest
+
+from app.config import Settings, settings
+from app.agent.types import RunConfig
+
+
+class TestSettings:
+    """Test Settings defaults using _env_file=None to isolate from local .env."""
+
+    def test_defaults(self):
+        s = Settings(_env_file=None)
+        assert s.host == "0.0.0.0"
+        assert s.port == 8080
+        assert s.debug is False
+        assert s.agent_enabled is False
+        assert s.agent_provider == "openai"
+        assert s.agent_ghost_enabled is False
+        assert s.browser_stream_enabled is False
+
+    def test_agent_defaults(self):
+        s = Settings(_env_file=None)
+        assert s.agent_max_steps == 12
+        assert s.agent_max_wall_time_ms == 90_000
+        assert s.agent_max_failures == 3
+        assert s.agent_block_private_ranges is True
+        assert s.agent_redact_secrets is True
+
+    def test_ghost_defaults(self):
+        s = Settings(_env_file=None)
+        assert s.agent_ghost_enabled is False
+        assert s.agent_ghost_auto_trigger is True
+        assert s.agent_ghost_vision_provider == ""
+        assert s.agent_ghost_max_image_width == 1280
+        assert s.agent_ghost_max_retries == 1
+
+    def test_stream_defaults(self):
+        s = Settings(_env_file=None)
+        assert s.browser_pool_size == 1
+        assert s.browser_stream_enabled is False
+        assert s.browser_stream_quality == 25
+        assert s.browser_stream_max_width == 854
+        assert s.browser_stream_max_lease_seconds == 300
+
+    def test_provider_defaults(self):
+        s = Settings(_env_file=None)
+        assert s.openai_model == "gpt-4.1-mini"
+        assert s.anthropic_model == "claude-3-5-sonnet-latest"
+        assert s.ollama_model == "llama3.1:8b-instruct"
+        assert s.ollama_base_url == "http://localhost:11434"
+
+
+class TestAgentAllowedTools:
+    def test_empty_string(self):
+        s = Settings(_env_file=None, agent_allowed_tools="")
+        assert s.get_agent_allowed_tools() == []
+
+    def test_single_tool(self):
+        s = Settings(_env_file=None, agent_allowed_tools="crawl")
+        assert s.get_agent_allowed_tools() == ["crawl"]
+
+    def test_multiple_tools(self):
+        s = Settings(_env_file=None, agent_allowed_tools="crawl, markdown, batch")
+        assert s.get_agent_allowed_tools() == ["crawl", "markdown", "batch"]
+
+    def test_strips_whitespace(self):
+        s = Settings(_env_file=None, agent_allowed_tools="  crawl , markdown  ")
+        assert s.get_agent_allowed_tools() == ["crawl", "markdown"]
+
+
+class TestAgentAllowedDomains:
+    def test_empty_string(self):
+        s = Settings(_env_file=None, agent_allowed_domains="")
+        assert s.get_agent_allowed_domains() == []
+
+    def test_multiple_domains(self):
+        s = Settings(_env_file=None, agent_allowed_domains="example.com, test.com")
+        assert s.get_agent_allowed_domains() == ["example.com", "test.com"]
+
+
+class TestBuildRunConfig:
+    def test_returns_run_config(self):
+        s = Settings(_env_file=None)
+        cfg = s.build_run_config()
+        assert isinstance(cfg, RunConfig)
+
+    def test_maps_values(self):
+        s = Settings(
+            _env_file=None,
+            agent_max_steps=20,
+            agent_max_wall_time_ms=60_000,
+            agent_max_failures=5,
+            agent_allowed_tools="crawl,markdown",
+            agent_allowed_domains="example.com",
+            agent_block_private_ranges=False,
+            agent_redact_secrets=False,
+        )
+        cfg = s.build_run_config()
+        assert cfg.max_steps == 20
+        assert cfg.max_wall_time_ms == 60_000
+        assert cfg.max_failures == 5
+        assert cfg.allowed_tools == ["crawl", "markdown"]
+        assert cfg.allowed_domains == ["example.com"]
+        assert cfg.block_private_ranges is False
+        assert cfg.redact_secrets is False
+
+
+class TestGlobalSettings:
+    def test_singleton_exists(self):
+        assert settings is not None
+        assert isinstance(settings, Settings)
