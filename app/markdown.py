@@ -364,6 +364,16 @@ class ContentFilter:
             '.sidebar', '.menu', '.ads', '.advertisement', '.social',
             '.share', '.comments', '.related', '.popup', '.modal'
         ]
+
+        # Hidden/a11y-only patterns are frequently abused for prompt injection.
+        # These are safe to remove for summarization-oriented extraction.
+        unwanted_selectors.extend([
+            '.sr-only', '.sr_only', '.srOnly',
+            '.visually-hidden', '.visually_hidden',
+            '.screen-reader-only', '.screen_reader_only',
+            '.a11y-only', '.a11y_only',
+            '[hidden]',
+        ])
         
         for selector in unwanted_selectors:
             for element in soup.select(selector):

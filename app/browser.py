@@ -16,6 +16,115 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+_VISIBLE_TEXT_JS = r"""
+({ maxChars }) => {
+  const HIDDEN_CLASSES = new Set([
+    'sr-only', 'sr_only', 'srOnly',
+    'visually-hidden', 'visually_hidden',
+    'screen-reader-only', 'screen_reader_only',
+    'a11y-only', 'a11y_only'
+  ]);
+
+  function hasHiddenClass(el) {
+    if (!el || !el.classList) return false;
+    for (const cls of el.classList) {
+      if (HIDDEN_CLASSES.has(cls)) return true;
+    }
+    return false;
+  }
+
+  function isAriaHidden(el) {
+    if (!el) return false;
+    if (el.getAttribute && el.getAttribute('aria-hidden') === 'true') return true;
+    if (el.hasAttribute && el.hasAttribute('hidden')) return true;
+    return false;
+  }
+
+  function looksLikeSrOnly(style, rect) {
+    if (!style || !rect) return false;
+    const w = rect.width || 0;
+    const h = rect.height || 0;
+    const area = w * h;
+    if (area > 16) return false;
+    // Common sr-only recipe: clipped + overflow hidden + tiny box.
+    const clip = (style.clip || '').toString();
+    const clipPath = (style.clipPath || '').toString();
+    const overflow = (style.overflow || '').toString();
+    const whiteSpace = (style.whiteSpace || '').toString();
+    const position = (style.position || '').toString();
+    const offscreen = rect.right < -100 || rect.bottom < -100 || rect.left > 100000 || rect.top > 100000;
+    const clipped = (clip && clip !== 'auto') || (clipPath && clipPath !== 'none');
+    const tiny = w <= 2 && h <= 2;
+    const absish = position === 'absolute' || position === 'fixed';
+    const recipe = clipped && (overflow === 'hidden' || whiteSpace === 'nowrap') && (tiny || offscreen) && absish;
+    return recipe;
+  }
+
+  function isVisibleTextNode(node) {
+    if (!node) return false;
+    const parent = node.parentElement;
+    if (!parent) return false;
+
+    // Quick attribute checks up the tree
+    if (parent.closest && parent.closest('[aria-hidden="true"], [hidden]')) return false;
+    if (hasHiddenClass(parent)) return false;
+
+    const style = window.getComputedStyle(parent);
+    if (!style) return false;
+    if (style.display === 'none') return false;
+    if (style.visibility === 'hidden') return false;
+    if (style.opacity === '0') return false;
+    if (style.fontSize === '0px') return false;
+
+    // Bounding box heuristics to drop 1px clipped sr-only content.
+    let rect;
+    try {
+      rect = parent.getBoundingClientRect();
+    } catch (_) {
+      rect = null;
+    }
+    if (rect) {
+      if ((rect.width || 0) === 0 || (rect.height || 0) === 0) return false;
+      if (looksLikeSrOnly(style, rect)) return false;
+    }
+
+    // final attribute checks
+    if (isAriaHidden(parent)) return false;
+    return true;
+  }
+
+  const walker = document.createTreeWalker(
+    document.body || document.documentElement,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) => {
+        const text = (node && node.nodeValue) ? node.nodeValue : '';
+        if (!text || !text.trim()) return NodeFilter.FILTER_REJECT;
+        if (!isVisibleTextNode(node)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
+  );
+
+  let out = '';
+  let node;
+  while ((node = walker.nextNode())) {
+    const chunk = (node.nodeValue || '').replace(/\s+/g, ' ').trim();
+    if (!chunk) continue;
+    if (out.length + chunk.length + 1 > maxChars) break;
+    out += (out ? ' ' : '') + chunk;
+  }
+
+  const wordCount = out ? (out.match(/\b\w+\b/g) || []).length : 0;
+  return {
+    text: out,
+    char_count: out.length,
+    word_count: wordCount
+  };
+}
+"""
+
+
 def split_image_by_height(image_bytesio: BytesIO, viewport_width: int, output_format: str = 'PNG') -> list[BytesIO]:
     """
     Splits an image stored in a BytesIO object by height into segments.
@@ -266,6 +375,15 @@ class BrowserEngine:
                     content = await page.content()
                     content_ms = int((asyncio.get_running_loop().time() - content_started_at) * 1000)
                     logger.debug(f"Retrieved content ({len(content)} characters)")
+
+                    # Best-effort visible text capture for hidden-text prompt injection detection.
+                    visible_started_at = asyncio.get_running_loop().time()
+                    visible_payload = None
+                    try:
+                        visible_payload = await page.evaluate(_VISIBLE_TEXT_JS, {"maxChars": 20000})
+                    except Exception as e:
+                        logger.debug(f"Visible text capture failed: {e}")
+                    visible_ms = int((asyncio.get_running_loop().time() - visible_started_at) * 1000)
                     
                     # Get page info
                     page_info = {
@@ -280,9 +398,16 @@ class BrowserEngine:
                             "navigation_ms": navigation_ms,
                             "wait_ms": wait_ms,
                             "content_ms": content_ms,
+                            "visible_text_ms": visible_ms,
                             "total_ms": int((asyncio.get_running_loop().time() - crawl_started_at) * 1000)
                         }
                     }
+
+                    if isinstance(visible_payload, dict):
+                        # Private/internal field; caller must NOT expose the raw visible text.
+                        page_info["_visible_text"] = visible_payload.get("text") or ""
+                        page_info["visible_char_count"] = int(visible_payload.get("char_count") or 0)
+                        page_info["visible_word_count"] = int(visible_payload.get("word_count") or 0)
                     
                     # Take screenshot if requested
                     screenshot_data = None

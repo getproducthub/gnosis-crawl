@@ -19,6 +19,7 @@ from app.markdown import MarkdownGenerator, ContentFilter
 from app.storage import CrawlStorageService
 from app.config import settings
 from app import __version__
+from app.policy.injection import analyze_hidden_prompt_injection
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,12 @@ class CrawlResult:
         self.extractor_version = f"gnosis-crawl/{__version__}"
         self.normalized_url = ""
         self.content_hash = ""
+        self.policy_flags: List[str] = []
+        self.quarantined: bool = False
+        self.quarantine_reason: str = ""
+        self.visible_char_count: int = 0
+        self.visible_word_count: int = 0
+        self.visible_similarity: Optional[float] = None
 
         # Processing info
         self.processing_time = 0.0
@@ -94,6 +101,12 @@ class CrawlResult:
             "extractor_version": self.extractor_version,
             "normalized_url": self.normalized_url,
             "content_hash": self.content_hash,
+            "policy_flags": self.policy_flags,
+            "quarantined": self.quarantined,
+            "quarantine_reason": self.quarantine_reason,
+            "visible_char_count": self.visible_char_count,
+            "visible_word_count": self.visible_word_count,
+            "visible_similarity": self.visible_similarity,
             "processing_time": self.processing_time,
             "browser_time": self.browser_time,
             "markdown_time": self.markdown_time
@@ -270,6 +283,15 @@ class CrawlerEngine:
         result.content = result.markdown_plain or result.markdown
         result.timings_ms["markdown_ms"] = int((time.time() - markdown_start) * 1000)
 
+        # Hidden-text prompt injection detection (best-effort).
+        visible_text = ""
+        page_info = result.page_info or {}
+        if isinstance(page_info, dict):
+            visible_text = page_info.pop("_visible_text", "") or ""
+            # Keep only metrics, never the raw visible text.
+            result.visible_char_count = int(page_info.get("visible_char_count") or 0)
+            result.visible_word_count = int(page_info.get("visible_word_count") or 0)
+
         result.body_char_count = len((result.content or "").strip())
         result.body_word_count = len(re.findall(r"\b\w+\b", result.content or ""))
         result.blocked, result.block_reason, result.captcha_detected = self._detect_block_signals(
@@ -284,6 +306,24 @@ class CrawlerEngine:
             status_code=result.status_code,
             content=result.content
         )
+
+        analysis = analyze_hidden_prompt_injection(
+            extracted_text=result.content or "",
+            visible_text=visible_text,
+        )
+        if analysis.flags:
+            result.policy_flags.extend(analysis.flags)
+        result.visible_similarity = analysis.visible_similarity
+
+        if analysis.quarantined:
+            result.quarantined = True
+            result.quarantine_reason = analysis.quarantine_reason or "quarantined"
+            # Never allow quarantined content to be treated as sufficient.
+            if result.content_quality == "sufficient":
+                result.content_quality = "minimal"
+            else:
+                result.content_quality = "minimal"
+
         result.content_hash = hashlib.sha256((result.content or "").encode("utf-8")).hexdigest() if result.content else ""
 
     def _http_error_family(self, status_code: Optional[int]) -> str:
