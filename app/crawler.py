@@ -319,10 +319,14 @@ class CrawlerEngine:
             result.quarantined = True
             result.quarantine_reason = analysis.quarantine_reason or "quarantined"
             # Never allow quarantined content to be treated as sufficient.
-            if result.content_quality == "sufficient":
-                result.content_quality = "minimal"
-            else:
-                result.content_quality = "minimal"
+            result.content_quality = "minimal"
+
+            # Fail-closed: do not return potentially malicious hidden instructions.
+            result.markdown = ""
+            result.markdown_plain = ""
+            result.content = ""
+            result.body_char_count = 0
+            result.body_word_count = 0
 
         result.content_hash = hashlib.sha256((result.content or "").encode("utf-8")).hexdigest() if result.content else ""
 
