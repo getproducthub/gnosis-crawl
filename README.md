@@ -365,7 +365,7 @@ Do not summarize unless `content_quality == "sufficient"`.
 ### Prompt Injection Defense
 
 - `quarantined=true` means the extractor detected instruction-like text in extracted content that was not present in the page's visible rendered text (common in `.sr-only`/visually-hidden abuse).
-- When quarantined, `content_quality` is downgraded to `minimal` and `policy_flags` includes `hidden_text_suspected` and `quarantined`.
+- When quarantined, `content_quality` is downgraded to `minimal`, `policy_flags` includes `hidden_text_suspected` and `quarantined`, and `content`/`markdown` outputs are blanked (fail-closed).
 
 ### Error Format
 

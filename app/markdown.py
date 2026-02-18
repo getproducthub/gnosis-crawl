@@ -90,6 +90,18 @@ class HTMLToMarkdownConverter:
         # Remove comments
         for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
             comment.extract()
+
+        # Remove common hidden/a11y-only patterns that are frequently abused for prompt injection.
+        hidden_selectors = [
+            '.sr-only', '.sr_only', '.srOnly',
+            '.visually-hidden', '.visually_hidden',
+            '.screen-reader-only', '.screen_reader_only',
+            '.a11y-only', '.a11y_only',
+            '[hidden]',
+        ]
+        for selector in hidden_selectors:
+            for element in soup.select(selector):
+                element.decompose()
     
     def _process_element(self, element) -> str:
         """Process a BeautifulSoup element and return markdown."""
