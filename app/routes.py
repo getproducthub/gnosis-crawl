@@ -61,6 +61,9 @@ def _crawl_result_to_payload(result: Any, include_html: bool = False) -> Dict[st
         "markdown": result.markdown,
         "markdown_plain": result.markdown_plain,
         "content": result.content,
+        "quarantined": bool(getattr(result, "quarantined", False)),
+        "quarantine_reason": getattr(result, "quarantine_reason", "") or None,
+        "policy_flags": list(getattr(result, "policy_flags", []) or []),
         "blocked": bool(result.blocked),
         "block_reason": result.block_reason or None,
         "captcha_detected": bool(result.captcha_detected),
@@ -70,6 +73,9 @@ def _crawl_result_to_payload(result: Any, include_html: bool = False) -> Dict[st
         "timings_ms": result.timings_ms or {},
         "body_char_count": int(result.body_char_count or 0),
         "body_word_count": int(result.body_word_count or 0),
+        "visible_char_count": int(getattr(result, "visible_char_count", 0) or 0),
+        "visible_word_count": int(getattr(result, "visible_word_count", 0) or 0),
+        "visible_similarity": getattr(result, "visible_similarity", None),
         "content_quality": result.content_quality,
         "extractor_version": result.extractor_version,
         "normalized_url": result.normalized_url,
@@ -137,6 +143,12 @@ async def crawl_single_url(
                 content=result.content,
                 final_url=result.final_url or result.url,
                 status_code=result.status_code,
+                quarantined=bool(getattr(result, "quarantined", False)),
+                quarantine_reason=getattr(result, "quarantine_reason", None),
+                policy_flags=list(getattr(result, "policy_flags", []) or []),
+                visible_char_count=int(getattr(result, "visible_char_count", 0) or 0),
+                visible_word_count=int(getattr(result, "visible_word_count", 0) or 0),
+                visible_similarity=getattr(result, "visible_similarity", None),
                 blocked=result.blocked,
                 block_reason=result.block_reason or None,
                 captcha_detected=result.captcha_detected,
@@ -173,6 +185,12 @@ async def crawl_single_url(
                 url=result.url,
                 final_url=result.final_url or result.url,
                 status_code=result.status_code,
+                quarantined=bool(getattr(result, "quarantined", False)),
+                quarantine_reason=getattr(result, "quarantine_reason", None),
+                policy_flags=list(getattr(result, "policy_flags", []) or []),
+                visible_char_count=int(getattr(result, "visible_char_count", 0) or 0),
+                visible_word_count=int(getattr(result, "visible_word_count", 0) or 0),
+                visible_similarity=getattr(result, "visible_similarity", None),
                 blocked=result.blocked,
                 block_reason=result.block_reason or None,
                 captcha_detected=result.captcha_detected,
@@ -289,6 +307,9 @@ async def crawl_markdown_only(
                 markdown=single.get("markdown"),
                 markdown_plain=single.get("markdown_plain"),
                 content=single.get("content"),
+                quarantined=bool(single.get("quarantined")),
+                quarantine_reason=single.get("quarantine_reason"),
+                policy_flags=list(single.get("policy_flags") or []),
                 blocked=bool(single.get("blocked")),
                 block_reason=single.get("block_reason"),
                 captcha_detected=bool(single.get("captcha_detected")),
@@ -298,6 +319,9 @@ async def crawl_markdown_only(
                 timings_ms=single.get("timings_ms") or {},
                 body_char_count=int(single.get("body_char_count") or 0),
                 body_word_count=int(single.get("body_word_count") or 0),
+                visible_char_count=int(single.get("visible_char_count") or 0),
+                visible_word_count=int(single.get("visible_word_count") or 0),
+                visible_similarity=single.get("visible_similarity"),
                 content_quality=single.get("content_quality"),
                 extractor_version=single.get("extractor_version"),
                 normalized_url=single.get("normalized_url"),
@@ -326,6 +350,12 @@ async def crawl_markdown_only(
         first = per_url_results[0]
         quality_values = [item.get("content_quality") for item in per_url_results if item.get("content_quality")]
         aggregate_quality = "sufficient" if all(q == "sufficient" for q in quality_values) else "minimal"
+        aggregate_quarantined = any(bool(item.get("quarantined")) for item in per_url_results)
+        aggregate_flags: List[str] = []
+        for item in per_url_results:
+            for flag in (item.get("policy_flags") or []):
+                if flag not in aggregate_flags:
+                    aggregate_flags.append(flag)
 
         return MarkdownResult(
             success=all_success,
@@ -335,6 +365,9 @@ async def crawl_markdown_only(
             markdown=joined_markdown,
             markdown_plain=joined_plain,
             content=aggregate_content,
+            quarantined=aggregate_quarantined,
+            quarantine_reason="one_or_more_urls_quarantined" if aggregate_quarantined else None,
+            policy_flags=aggregate_flags,
             blocked=any(bool(item.get("blocked")) for item in per_url_results),
             block_reason=next((item.get("block_reason") for item in per_url_results if item.get("block_reason")), None),
             captcha_detected=any(bool(item.get("captcha_detected")) for item in per_url_results),
@@ -344,6 +377,9 @@ async def crawl_markdown_only(
             timings_ms=first.get("timings_ms") or {},
             body_char_count=sum(int(item.get("body_char_count") or 0) for item in per_url_results),
             body_word_count=sum(int(item.get("body_word_count") or 0) for item in per_url_results),
+            visible_char_count=sum(int(item.get("visible_char_count") or 0) for item in per_url_results),
+            visible_word_count=sum(int(item.get("visible_word_count") or 0) for item in per_url_results),
+            visible_similarity=None,
             content_quality=aggregate_quality,
             extractor_version=first.get("extractor_version"),
             normalized_url=first.get("normalized_url"),

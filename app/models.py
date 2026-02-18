@@ -95,6 +95,12 @@ class CrawlResult(BaseModel):
     extractor_version: Optional[str] = None
     normalized_url: Optional[str] = None
     content_hash: Optional[str] = None
+    quarantined: bool = False
+    quarantine_reason: Optional[str] = None
+    policy_flags: List[str] = []
+    visible_char_count: int = 0
+    visible_word_count: int = 0
+    visible_similarity: Optional[float] = None
     screenshot_url: Optional[str] = None
     metadata: Dict[str, Any] = {}
     crawled_at: datetime
@@ -123,6 +129,12 @@ class MarkdownResult(BaseModel):
     extractor_version: Optional[str] = None
     normalized_url: Optional[str] = None
     content_hash: Optional[str] = None
+    quarantined: bool = False
+    quarantine_reason: Optional[str] = None
+    policy_flags: List[str] = []
+    visible_char_count: int = 0
+    visible_word_count: int = 0
+    visible_similarity: Optional[float] = None
     metadata: Dict[str, Any] = {}
     crawled_at: datetime
     error: Optional[str] = None

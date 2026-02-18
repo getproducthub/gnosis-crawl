@@ -351,7 +351,7 @@ open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
 
 `POST /api/markdown` returns:
 
-`success`, `url`, `final_url`, `status_code`, `markdown`, `markdown_plain`, `content`, `render_mode`, `wait_strategy`, `timings_ms`, `blocked`, `block_reason`, `captcha_detected`, `http_error_family`, `body_char_count`, `body_word_count`, `content_quality`, `extractor_version`, `normalized_url`, `content_hash`
+`success`, `url`, `final_url`, `status_code`, `markdown`, `markdown_plain`, `content`, `render_mode`, `wait_strategy`, `timings_ms`, `blocked`, `block_reason`, `captcha_detected`, `http_error_family`, `body_char_count`, `body_word_count`, `visible_char_count`, `visible_word_count`, `visible_similarity`, `quarantined`, `quarantine_reason`, `policy_flags`, `content_quality`, `extractor_version`, `normalized_url`, `content_hash`
 
 ### Content Quality
 
@@ -361,6 +361,11 @@ open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
 - `sufficient` — usable for summarization
 
 Do not summarize unless `content_quality == "sufficient"`.
+
+### Prompt Injection Defense
+
+- `quarantined=true` means the extractor detected instruction-like text in extracted content that was not present in the page's visible rendered text (common in `.sr-only`/visually-hidden abuse).
+- When quarantined, `content_quality` is downgraded to `minimal` and `policy_flags` includes `hidden_text_suspected` and `quarantined`.
 
 ### Error Format
 
