@@ -55,3 +55,6 @@ storage/
 crawl_cache/
 .codex-container.toml
 .codex-mcp.config
+
+.github/
+docs/

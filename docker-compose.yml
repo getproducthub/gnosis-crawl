@@ -1,11 +1,11 @@
-version: '3.8'
-
 services:
   gnosis-crawl:
     build: .
     container_name: gnosis-crawl
     ports:
       - "6792:8080"
+    env_file:
+      - .env
     environment:
       - HOST=0.0.0.0
       - PORT=8080
@@ -13,17 +13,27 @@ services:
       - STORAGE_PATH=/app/storage
       - RUNNING_IN_CLOUD=false
       - DISABLE_AUTH=true
-      - GNOSIS_AUTH_URL=http://gnosis-auth:5000
       - MAX_CONCURRENT_CRAWLS=3
-      - CRAWL_TIMEOUT=30
+      - CRAWL_TIMEOUT=60
+      - BROWSER_TIMEOUT=60000
       - ENABLE_JAVASCRIPT=true
-      - ENABLE_SCREENSHOTS=false
+      - ENABLE_SCREENSHOTS=true
+      - AGENT_GHOST_ENABLED=true
+      - AGENT_GHOST_AUTO_TRIGGER=true
+      - AGENT_GHOST_VISION_PROVIDER=anthropic
+      - BROWSER_ENGINE=camoufox
+      - STEALTH_ENABLED=true
+      - BLOCK_TRACKING_DOMAINS=true
+      # Residential Proxy (uncomment and configure)
+      # - PROXY_SERVER=http://gate.decodo.com:10001
+      # - PROXY_USERNAME=spwod13p0r
+      # - PROXY_PASSWORD=your_password
+      # - PROXY_BYPASS=localhost,127.0.0.1
     volumes:
       - gnosis_shared_storage:/app/storage
       - ./app:/app/app  # Mount for development hot reload
     networks:
       - gnosis-network
-      - codex-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -41,6 +51,3 @@ networks:
   gnosis-network:
     name: gnosis_network
     driver: bridge
-  codex-network:
-    external: true
-    name: codex-network

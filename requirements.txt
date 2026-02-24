@@ -26,3 +26,10 @@ readability-lxml>=0.8.0
 
 # Markdown generation (for Phase 2)
 markdownify>=0.11.0
+
+# Stealth (anti-detection)
+playwright-stealth>=2.0.2
+camoufox[geoip]
+
+# LLM providers (for Ghost Protocol vision extraction)
+anthropic>=0.39.0

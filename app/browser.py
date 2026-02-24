@@ -194,6 +194,7 @@ class BrowserEngine:
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
         self._browser_lock = asyncio.Lock()
+        self._camoufox_cm = None
         
     async def start_browser(self, javascript_enabled: bool = True) -> None:
         """Start browser with enhanced configuration and anti-detection."""
@@ -207,81 +208,113 @@ class BrowserEngine:
                 return
                 
             try:
-                logger.info("Starting Playwright and browser")
-                self.playwright = await async_playwright().start()
-                
-                # Enhanced browser arguments for stability and stealth
-                browser_args = [
-                    '--disable-gpu',
-                    '--no-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--disable-accelerated-video-decode',
-                    '--disable-features=site-per-process',
-                    '--disable-extensions',
-                    '--disable-background-networking',
-                    '--disable-default-apps',
-                    '--disable-sync',
-                    '--disable-translate',
-                    '--hide-scrollbars',
-                    '--metrics-recording-only',
-                    '--mute-audio',
-                    '--no-first-run',
-                    '--disable-web-security',
-                    '--disable-features=VizDisplayCompositor'
-                ]
-                
-                # Add headless configuration
-                headless_mode = settings.browser_headless
-                if headless_mode:
-                    browser_args.extend([
-                        '--headless=new',
-                        '--disable-notifications',
-                        '--disable-infobars'
-                    ])
-                
-                logger.info(f"Launching browser (headless={headless_mode}, js_enabled={javascript_enabled})")
-                self.browser = await self.playwright.chromium.launch(
-                    headless=headless_mode,
-                    args=browser_args
-                )
-                
-                # Create context with randomized fingerprint
-                viewport = self._get_random_viewport()
-                user_agent = self._get_random_user_agent()
-                timezone_id = self._get_random_timezone()
-                locale = self._get_random_locale()
-                
-                logger.info(f"Browser context: viewport={viewport}, timezone={timezone_id}")
-                
-                self.context = await self.browser.new_context(
-                    viewport=viewport,
-                    user_agent=user_agent,
-                    locale=locale,
-                    timezone_id=timezone_id,
-                    has_touch=random.choice([True, False]),
-                    java_script_enabled=javascript_enabled,
-                    ignore_https_errors=True
-                )
-                
-                # Create page with enhanced headers
-                self.page = await self.context.new_page()
-                await self._set_realistic_headers()
-                
-                logger.info("Browser started successfully")
+                if settings.browser_engine == "camoufox":
+                    logger.info("Starting Camoufox browser engine")
+                    from camoufox.async_api import AsyncCamoufox
+
+                    proxy = settings.get_proxy_config()
+                    headless_mode = "virtual" if settings.browser_headless else False
+
+                    self._camoufox_cm = AsyncCamoufox(
+                        headless=headless_mode,
+                        proxy=proxy,
+                        geoip=True,
+                        os=["windows", "macos", "linux"],
+                    )
+                    self.browser = await self._camoufox_cm.__aenter__()
+                    self.context = await self.browser.new_context()
+                    self.page = await self.context.new_page()
+
+                    logger.info("Camoufox browser started successfully")
+                else:
+                    logger.info("Starting Playwright and browser")
+                    self.playwright = await async_playwright().start()
+
+                    # Enhanced browser arguments for stability and stealth
+                    browser_args = [
+                        '--disable-gpu',
+                        '--no-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-accelerated-2d-canvas',
+                        '--disable-accelerated-video-decode',
+                        '--disable-features=site-per-process',
+                        '--disable-extensions',
+                        '--disable-background-networking',
+                        '--disable-default-apps',
+                        '--disable-sync',
+                        '--disable-translate',
+                        '--hide-scrollbars',
+                        '--metrics-recording-only',
+                        '--mute-audio',
+                        '--no-first-run',
+                        '--disable-web-security',
+                        '--disable-features=VizDisplayCompositor'
+                    ]
+
+                    # Add headless configuration
+                    headless_mode = settings.browser_headless
+                    if headless_mode:
+                        browser_args.extend([
+                            '--headless=new',
+                            '--disable-notifications',
+                            '--disable-infobars'
+                        ])
+
+                    logger.info(f"Launching browser (headless={headless_mode}, js_enabled={javascript_enabled})")
+                    self.browser = await self.playwright.chromium.launch(
+                        headless=headless_mode,
+                        args=browser_args
+                    )
+
+                    # Create context with randomized fingerprint
+                    viewport = self._get_random_viewport()
+                    user_agent = self._get_random_user_agent()
+                    timezone_id = self._get_random_timezone()
+                    locale = self._get_random_locale()
+
+                    logger.info(f"Browser context: viewport={viewport}, timezone={timezone_id}")
+
+                    self.context = await self.browser.new_context(
+                        viewport=viewport,
+                        user_agent=user_agent,
+                        locale=locale,
+                        timezone_id=timezone_id,
+                        has_touch=random.choice([True, False]),
+                        java_script_enabled=javascript_enabled,
+                        ignore_https_errors=True
+                    )
+
+                    # Create page with enhanced headers
+                    self.page = await self.context.new_page()
+                    await self._set_realistic_headers()
+
+                    logger.info("Browser started successfully")
                 
             except Exception as e:
                 logger.error(f"Failed to start browser: {e}", exc_info=True)
                 await self.close()
                 raise
     
-    async def create_isolated_context(self, javascript_enabled: bool = True) -> tuple[BrowserContext, Page]:
+    async def create_isolated_context(self, javascript_enabled: bool = True, proxy=None) -> tuple[BrowserContext, Page]:
         """Create a new isolated browser context and page for concurrent operations."""
         if not self.browser:
             logger.info("Browser not started, initializing")
             await self.start_browser(javascript_enabled=javascript_enabled)
-        
-        # Create new context with randomized fingerprint
+
+        from app.stealth import apply_stealth, setup_request_interception
+
+        if settings.browser_engine == "camoufox":
+            # Camoufox auto-generates realistic fingerprints per context
+            context_options = {}
+            if proxy is not None:
+                context_options['proxy'] = proxy
+            context = await self.browser.new_context(**context_options)
+            page = await context.new_page()
+            # Only add request interception — stealth is built-in at C++ level
+            await setup_request_interception(context)
+            return context, page
+
+        # Chromium path: manual fingerprinting + playwright-stealth
         context_options = {
             'viewport': {
                 'width': random.randint(1200, 1920),
@@ -296,17 +329,17 @@ class BrowserEngine:
             'permissions': [],
             'java_script_enabled': javascript_enabled
         }
-        
+
+        if proxy is not None:
+            context_options['proxy'] = proxy
+
         context = await self.browser.new_context(**context_options)
         page = await context.new_page()
-        
-        # Apply stealth configurations
-        await page.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
-            Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});
-        """)
-        
+
+        # Apply stealth patches and request interception
+        await apply_stealth(context)
+        await setup_request_interception(context)
+
         return context, page
 
     async def crawl_with_context(
@@ -318,10 +351,11 @@ class BrowserEngine:
         javascript_payload: Optional[str] = None,
         wait_until: str = "domcontentloaded",
         wait_for_selector: Optional[str] = None,
-        wait_after_load_ms: int = 1000
+        wait_after_load_ms: int = 1000,
+        proxy=None
     ) -> tuple[str, dict, bytes]:
         """Crawl URL using an isolated context for concurrent operations."""
-        context, page = await self.create_isolated_context(javascript_enabled)
+        context, page = await self.create_isolated_context(javascript_enabled, proxy=proxy)
         
         try:
             max_retries = 3
@@ -421,7 +455,7 @@ class BrowserEngine:
                             screenshot_bytesio = BytesIO(raw_screenshot)
                             
                             # Get viewport width from context
-                            viewport = await page.viewport_size()
+                            viewport = page.viewport_size
                             viewport_width = viewport['width'] if viewport else 1429
                             
                             screenshot_segments = split_image_by_height(screenshot_bytesio, viewport_width)
@@ -600,21 +634,25 @@ class BrowserEngine:
                 if self.page and not self.page.is_closed():
                     await self.page.close()
                     self.page = None
-                
+
                 if self.context:
                     await self.context.close()
                     self.context = None
-                
+
                 if self.browser:
                     await self.browser.close()
                     self.browser = None
-                
+
+                if self._camoufox_cm:
+                    await self._camoufox_cm.__aexit__(None, None, None)
+                    self._camoufox_cm = None
+
                 if self.playwright:
                     await self.playwright.stop()
                     self.playwright = None
-                
+
                 logger.info("Browser closed successfully")
-                
+
             except Exception as e:
                 logger.error(f"Error closing browser: {e}")
     

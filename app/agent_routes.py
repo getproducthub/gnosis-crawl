@@ -163,6 +163,7 @@ async def agent_ghost(request: GhostExtractRequest):
     Bypasses DOM-based anti-bot detection by reading rendered pixels instead.
     """
     from app.agent.ghost import run_ghost_protocol, create_ghost_provider, GHOST_EXTRACTION_PROMPT
+    from app.stealth import resolve_proxy
 
     try:
         provider = create_ghost_provider()
@@ -173,12 +174,15 @@ async def agent_ghost(request: GhostExtractRequest):
             detail=f"Failed to initialize vision provider: {exc}",
         )
 
+    proxy = resolve_proxy(getattr(request, 'proxy', None))
+
     result = await run_ghost_protocol(
         request.url,
         provider=provider,
         max_width=settings.agent_ghost_max_image_width,
         timeout=request.timeout,
         prompt=request.prompt or GHOST_EXTRACTION_PROMPT,
+        proxy=proxy,
     )
 
     return GhostExtractResponse(
