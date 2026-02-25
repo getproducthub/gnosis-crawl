@@ -34,18 +34,27 @@ Grub Crawler gets dirty so you don't have to. It penetrates every layer of prote
 
 ## Why Grub
 
-| | Traditional Crawlers | **Grub Crawler** |
-|---|---|---|
-| Anti-detect browser | ❌ | ✅ Camoufox (C++-level fingerprint spoofing) |
-| Anti-bot bypass | ❌ | ✅ Ghost Protocol (vision AI) |
-| Per-request proxy | ❌ | ✅ Residential/datacenter IP rotation |
-| Stealth mode | ❌ | ✅ playwright-stealth + tracker blocking |
-| Autonomous browsing | ❌ | ✅ Agent loop with planning |
-| Multi-page reasoning | ❌ | ✅ Bounded state machine |
-| LLM fallback rotation | ❌ | ✅ OpenAI / Anthropic / Ollama |
-| Policy enforcement | ❌ | ✅ Domain gates, secret redaction |
-| Live browser stream | ❌ | ✅ CDP screencast over WebSocket/MJPEG |
-| Replayable traces | ❌ | ✅ Full JSON trace per run |
+We integrated features from every major crawler — then added what none of them have.
+
+| Feature | Crawl4AI | Firecrawl | Apify | Scrapy | Browserbase | Scrapfly | **Grub** |
+|---|---|---|---|---|---|---|---|
+| **Self-hosted** | ✅ | ⚠️ limited | ✅ Crawlee | ✅ | ❌ cloud | ❌ cloud | ✅ **full** |
+| **Anti-detect browser** | stealth plugin | ❌ cloud only | Camoufox template | ❌ | custom Chromium | proprietary | ✅ **Camoufox** |
+| **Ghost Protocol** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **auto fallback** |
+| **Per-request proxy** | ✅ escalation | ⚠️ cloud only | ✅ built-in | middleware | ✅ managed | ✅ 130M+ IPs | ✅ **per-request** |
+| **Stealth patches** | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ **opt-in** |
+| **Agent loop** | ✅ agentic | ✅ /agent | ✅ AI Agent | ❌ spiders | ✅ Stagehand | ⚠️ via integrations | ✅ **bounded SM** |
+| **Live browser stream** | ✅ WebSocket | ✅ Live View | ⚠️ pool only | ❌ | ✅ iFrame + CDP | ✅ CDP | ✅ **WS + MJPEG** |
+| **Markdown output** | ✅ Fit Markdown | ✅ core | ✅ RAG Browser | ❌ | ✅ via MCP | ✅ built-in | ✅ **core** |
+| **MCP tools** | ✅ community | ✅ official | ✅ official | ⚠️ community | ✅ official | ✅ official | ✅ **15 tools** |
+| **Multi-provider LLM** | ✅ all LLMs | ⚠️ Gemini | ⚠️ per-Actor | ❌ | ⚠️ Stagehand | ⚠️ via frameworks | ✅ **OpenAI/Anthropic/Ollama** |
+| **Policy enforcement** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **domain gates + redaction** |
+| **Replayable traces** | ❌ | ❌ | ⚠️ run logs | ❌ | ⚠️ session replay | ❌ | ✅ **full JSON trace** |
+| **Prompt injection defense** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **quarantine + visible-text diff** |
+| **License** | Apache 2.0 | AGPL-3.0 | MIT (Crawlee) | BSD | MIT (Stagehand) | Proprietary | **Proprietary** |
+| **Pricing** | Free | Free–$333/mo | Free–$999/mo | Free | Free–$99/mo | Usage-based | **Self-hosted** |
+
+**Only Grub Crawler has Ghost Protocol** — automatic vision-based fallback that screenshots blocked pages and extracts content via LLM when every other tool just fails. Prevention (Camoufox + proxy + stealth) handles 95% of blocks. Ghost Protocol handles the rest.
 
 ## API Endpoints
 
