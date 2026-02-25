@@ -21,6 +21,7 @@ from app.crawler import get_crawler_engine
 from fastapi.responses import Response
 from app.storage import CrawlStorageService
 from app.cache_store import RemoteCacheStore
+from app.proxy import resolve_proxy
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +112,10 @@ async def crawl_single_url(
         # Perform crawl with request options
         javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
         javascript_payload = request.javascript_payload or request.options.javascript_payload
-        
+
+        # Resolve proxy (per-request overrides env-based default)
+        proxy = resolve_proxy(getattr(request.options, 'proxy', None))
+
         result = await crawler.crawl_url(
             url=str(request.url),
             javascript=javascript_enabled,
@@ -124,7 +128,8 @@ async def crawl_single_url(
             wait_for_selector=request.options.wait_for_selector,
             wait_after_load_ms=request.options.wait_after_load_ms,
             retry_with_js_if_thin=request.options.retry_with_js_if_thin,
-            session_id=session_id
+            session_id=session_id,
+            proxy=proxy
         )
         
         if result.success:
@@ -249,6 +254,9 @@ async def crawl_markdown_only(
         javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
         javascript_payload = request.javascript_payload or request.options.javascript_payload
 
+        # Resolve proxy (per-request overrides env-based default)
+        proxy = resolve_proxy(getattr(request.options, 'proxy', None))
+
         per_url_results: List[Dict[str, Any]] = []
         for target in url_candidates:
             crawl_result = await crawler.crawl_url(
@@ -261,7 +269,8 @@ async def crawl_markdown_only(
                 wait_until=request.options.wait_until,
                 wait_for_selector=request.options.wait_for_selector,
                 wait_after_load_ms=request.options.wait_after_load_ms,
-                retry_with_js_if_thin=request.options.retry_with_js_if_thin
+                retry_with_js_if_thin=request.options.retry_with_js_if_thin,
+                proxy=proxy
             )
             payload = _crawl_result_to_payload(crawl_result, include_html=False)
             cache_doc = None
@@ -421,11 +430,14 @@ async def crawl_raw_html(
         javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
         javascript_payload = request.javascript_payload or request.options.javascript_payload
 
+        proxy = resolve_proxy(getattr(request.options, 'proxy', None))
+
         result = await crawler.crawl_raw_html(
             url=str(request.url),
             javascript=javascript_enabled,
             timeout=request.options.timeout,
-            javascript_payload=javascript_payload
+            javascript_payload=javascript_payload,
+            proxy=proxy
         )
 
         metadata = {
@@ -490,6 +502,9 @@ async def crawl_batch_urls(
         
         logger.info(f"Starting batch crawl for {len(url_list)} URLs (customer: {customer_identifier})")
         
+        # Resolve proxy
+        proxy = resolve_proxy(getattr(request.options, 'proxy', None))
+
         # Perform batch crawl (synchronous)
         batch_result = await crawler.batch_crawl(
             urls=url_list,
@@ -502,7 +517,8 @@ async def crawl_batch_urls(
             wait_until=request.options.wait_until,
             wait_for_selector=request.options.wait_for_selector,
             wait_after_load_ms=request.options.wait_after_load_ms,
-            retry_with_js_if_thin=request.options.retry_with_js_if_thin
+            retry_with_js_if_thin=request.options.retry_with_js_if_thin,
+            proxy=proxy
         )
 
         

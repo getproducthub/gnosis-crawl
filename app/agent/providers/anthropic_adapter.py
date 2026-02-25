@@ -94,6 +94,18 @@ class AnthropicAdapter(LLMAdapter):
     ) -> str:
         """Send an image to Claude vision and get text back."""
         b64 = base64.b64encode(image_bytes).decode("ascii")
+
+        # Detect actual image format from magic bytes
+        media_type = "image/png"  # Playwright default
+        if image_bytes[:3] == b"\xff\xd8\xff":
+            media_type = "image/jpeg"
+        elif image_bytes[:4] == b"\x89PNG":
+            media_type = "image/png"
+        elif image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
+            media_type = "image/webp"
+        elif image_bytes[:3] == b"GIF":
+            media_type = "image/gif"
+
         messages = [
             {
                 "role": "user",
@@ -102,7 +114,7 @@ class AnthropicAdapter(LLMAdapter):
                         "type": "image",
                         "source": {
                             "type": "base64",
-                            "media_type": "image/jpeg",
+                            "media_type": media_type,
                             "data": b64,
                         },
                     },

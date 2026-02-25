@@ -135,7 +135,8 @@ class CrawlerEngine:
         wait_until: str = "domcontentloaded",
         wait_for_selector: Optional[str] = None,
         wait_after_load_ms: int = 1000,
-        retry_with_js_if_thin: bool = False
+        retry_with_js_if_thin: bool = False,
+        proxy=None
     ) -> CrawlResult:
         """
         Crawl a single URL and return comprehensive results.
@@ -188,7 +189,8 @@ class CrawlerEngine:
                     javascript_payload=javascript_payload,
                     wait_until=wait_until,
                     wait_for_selector=wait_for_selector,
-                    wait_after_load_ms=wait_after_load_ms
+                    wait_after_load_ms=wait_after_load_ms,
+                    proxy=proxy
                 )
 
             result.html, result.page_info, screenshot_data = await run_capture(javascript)
@@ -429,7 +431,8 @@ class CrawlerEngine:
         wait_until: str = "domcontentloaded",
         wait_for_selector: Optional[str] = None,
         wait_after_load_ms: int = 1000,
-        retry_with_js_if_thin: bool = False
+        retry_with_js_if_thin: bool = False,
+        proxy=None
     ) -> str:
         """
         Crawl URL and return only the markdown content.
@@ -453,7 +456,8 @@ class CrawlerEngine:
                 wait_until=wait_until,
                 wait_for_selector=wait_for_selector,
                 wait_after_load_ms=wait_after_load_ms,
-                retry_with_js_if_thin=retry_with_js_if_thin
+                retry_with_js_if_thin=retry_with_js_if_thin,
+                proxy=proxy
             )
             
             if result.success:
@@ -470,7 +474,8 @@ class CrawlerEngine:
         url: str,
         javascript: bool = True,
         timeout: int = None,
-        javascript_payload: Optional[str] = None
+        javascript_payload: Optional[str] = None,
+        proxy=None
     ) -> Dict[str, Any]:
         """
         Crawl URL and return only raw HTML content.
@@ -496,7 +501,8 @@ class CrawlerEngine:
                 javascript_enabled=javascript,
                 timeout=timeout_ms,
                 take_screenshot=False,
-                javascript_payload=javascript_payload
+                javascript_payload=javascript_payload,
+                proxy=proxy
             )
 
             result["success"] = True
@@ -629,7 +635,8 @@ class CrawlerEngine:
         wait_until: str = "domcontentloaded",
         wait_for_selector: Optional[str] = None,
         wait_after_load_ms: int = 1000,
-        retry_with_js_if_thin: bool = False
+        retry_with_js_if_thin: bool = False,
+        proxy=None
     ) -> Dict[str, Any]:
         """
         Crawl multiple URLs concurrently.
@@ -662,7 +669,8 @@ class CrawlerEngine:
                     wait_until=wait_until,
                     wait_for_selector=wait_for_selector,
                     wait_after_load_ms=wait_after_load_ms,
-                    retry_with_js_if_thin=retry_with_js_if_thin
+                    retry_with_js_if_thin=retry_with_js_if_thin,
+                    proxy=proxy
                 )
         
         # Execute crawls concurrently

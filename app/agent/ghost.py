@@ -193,6 +193,7 @@ async def capture_screenshot(
     max_width: int = 1280,
     timeout: int = 30,
     javascript: bool = True,
+    proxy=None,
 ) -> GhostCapture:
     """Take a full-page screenshot of a URL using Playwright.
 
@@ -223,6 +224,7 @@ async def capture_screenshot(
             take_screenshot=True,
             wait_until="networkidle",  # wait for full render
             wait_after_load_ms=2000,  # extra wait for challenge pages
+            proxy=proxy,
         )
 
         capture_ms = int((time.monotonic() - start) * 1000)
@@ -393,6 +395,7 @@ async def run_ghost_protocol(
     timeout: int = 30,
     prompt: str = GHOST_EXTRACTION_PROMPT,
     block_detection: Optional[BlockDetection] = None,
+    proxy=None,
 ) -> GhostResult:
     """Execute the full Ghost Protocol pipeline.
 
@@ -420,6 +423,7 @@ async def run_ghost_protocol(
         url,
         max_width=max_width,
         timeout=timeout,
+        proxy=proxy,
     )
 
     if not capture.success:
