@@ -11,6 +11,8 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet?style=flat-square)](https://modelcontextprotocol.io)
 [![Ghost Protocol](https://img.shields.io/badge/Ghost_Protocol-active-ff6b6b?style=flat-square)](#ghost-protocol)
 [![Live Stream](https://img.shields.io/badge/Live_Stream-CDP/WebSocket-00d4ff?style=flat-square)](#live-stream)
+[![Camoufox](https://img.shields.io/badge/Camoufox-anti--detect-ff8c00?style=flat-square)](#anti-detection)
+[![Proxy](https://img.shields.io/badge/Proxy-per--request-8b5cf6?style=flat-square)](#anti-detection)
 
 <br/>
 
@@ -20,7 +22,7 @@
 
 <br/>
 
-<a href="#api-endpoints">Endpoints</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#live-stream">Live Stream</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
+<a href="#api-endpoints">Endpoints</a> · <a href="#anti-detection">Anti-Detection</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#live-stream">Live Stream</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
 
 ---
 
@@ -34,7 +36,10 @@ Grub Crawler gets dirty so you don't have to. It penetrates every layer of prote
 
 | | Traditional Crawlers | **Grub Crawler** |
 |---|---|---|
+| Anti-detect browser | ❌ | ✅ Camoufox (C++-level fingerprint spoofing) |
 | Anti-bot bypass | ❌ | ✅ Ghost Protocol (vision AI) |
+| Per-request proxy | ❌ | ✅ Residential/datacenter IP rotation |
+| Stealth mode | ❌ | ✅ playwright-stealth + tracker blocking |
 | Autonomous browsing | ❌ | ✅ Agent loop with planning |
 | Multi-page reasoning | ❌ | ✅ Bounded state machine |
 | LLM fallback rotation | ❌ | ✅ OpenAI / Anthropic / Ollama |
@@ -167,15 +172,21 @@ The MCP bridge exposes all capabilities to any MCP-compatible host:
 | `jobs.py` | `JobType` enum (incl. `AGENT_RUN`), `JobManager`, `JobProcessor` | Done |
 | `models.py` | All Pydantic models incl. `AgentRunRequest/Response` | Done |
 
+### Anti-Detection (`app/`)
+| File | Purpose | Status |
+|------|---------|--------|
+| `stealth.py` | playwright-stealth patches, tracker domain blocking | Done |
+| `proxy.py` | Per-request proxy resolution with env fallback | Done |
+
 ### Infrastructure
 | File | Purpose | Status |
 |------|---------|--------|
-| `config.py` | All env vars incl. agent + provider + ghost config | Done |
+| `config.py` | All env vars incl. agent + provider + ghost + proxy + stealth config | Done |
 | `storage.py` | User-partitioned storage (local filesystem / GCS) | Done |
-| `crawler.py` | Playwright crawling engine | Done |
+| `crawler.py` | Playwright crawling engine with proxy support | Done |
 | `markdown.py` | HTML to markdown conversion | Done |
-| `browser.py` | Browser automation utilities | Done |
-| `browser_pool.py` | Persistent Chromium pool with lease/return pattern | Done |
+| `browser.py` | Browser automation — Chromium + Camoufox engines | Done |
+| `browser_pool.py` | Persistent browser pool with lease/return pattern | Done |
 | `stream.py` | CDP screencast → WebSocket/MJPEG relay + interactive commands | Done |
 
 ## Agent State Machine
@@ -196,6 +207,53 @@ Stop conditions enforced every iteration:
 - `no_op_loop` (3 consecutive empty responses)
 - `policy_denied` (blocked tool/domain)
 - `completed` (agent responds with text)
+
+## Anti-Detection
+
+Three layers of anti-detection that stack together. Prevention stops blocks before they happen. Ghost Protocol handles them after.
+
+### Camoufox Engine
+
+Pluggable anti-detect browser with C++-level fingerprint spoofing. No manual user-agent tricks — Camoufox generates realistic fingerprints per context at the browser level, including canvas, WebGL, fonts, and navigator properties.
+
+```bash
+# Switch engine (default: chromium)
+BROWSER_ENGINE=camoufox
+```
+
+### Per-Request Proxy
+
+Route crawl traffic through residential, datacenter, or custom proxy pools. Per-request override with env-based defaults. Full Playwright-compatible proxy config.
+
+```bash
+# Env-based default
+PROXY_SERVER=http://proxy.example.com:10001
+PROXY_USERNAME=your_username
+PROXY_PASSWORD=your_password
+
+# Or per-request
+curl -X POST http://localhost:8080/api/crawl \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "options": {
+      "proxy": {
+        "server": "http://proxy.example.com:10001",
+        "username": "your_username",
+        "password": "your_password"
+      }
+    }
+  }'
+```
+
+### Stealth Mode
+
+Opt-in `playwright-stealth` patches for Chromium (skipped for Camoufox where it's built-in). Blocks 20+ tracking/analytics domains (Google Analytics, DataDome, PerimeterX, etc.) to reduce fingerprint surface.
+
+```bash
+STEALTH_ENABLED=true
+BLOCK_TRACKING_DOMAINS=true
+```
 
 ## Ghost Protocol
 
@@ -270,6 +328,20 @@ curl -X POST http://localhost:8080/api/agent/run \
   }'
 ```
 
+### Anti-Detection (Camoufox + Proxy)
+
+```bash
+# Add to .env
+BROWSER_ENGINE=camoufox
+STEALTH_ENABLED=true
+BLOCK_TRACKING_DOMAINS=true
+
+# Optional: proxy
+PROXY_SERVER=http://proxy.example.com:10001
+PROXY_USERNAME=your_username
+PROXY_PASSWORD=your_password
+```
+
 ### Ghost Protocol (anti-bot bypass)
 
 ```bash
@@ -309,11 +381,24 @@ open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
 - `DISABLE_AUTH` (default: false)
 - `GNOSIS_AUTH_URL` (default: http://gnosis-auth:5000)
 
+### Browser Engine
+- `BROWSER_ENGINE` — chromium | camoufox (default: chromium)
+
 ### Crawling
 - `MAX_CONCURRENT_CRAWLS` (default: 5)
 - `CRAWL_TIMEOUT` (default: 30)
 - `ENABLE_JAVASCRIPT` (default: true)
 - `ENABLE_SCREENSHOTS` (default: false)
+
+### Proxy
+- `PROXY_SERVER` — proxy URL (e.g. http://proxy:10001)
+- `PROXY_USERNAME`
+- `PROXY_PASSWORD`
+- `PROXY_BYPASS` — comma-separated bypass list
+
+### Stealth
+- `STEALTH_ENABLED` (default: false) — playwright-stealth patches
+- `BLOCK_TRACKING_DOMAINS` (default: false) — block analytics/tracking requests
 
 ### Agent (Mode B)
 - `AGENT_ENABLED` (default: false)
@@ -401,8 +486,15 @@ Do not summarize unless `content_quality == "sufficient"`.
 - [x] MJPEG fallback stream (W9)
 - [x] Stream status + pool status endpoints (W9)
 
+### Phase 5.5: Anti-Detection ✅
+- [x] Camoufox anti-detect browser engine (W10)
+- [x] Per-request proxy with env fallback (W10)
+- [x] Stealth patches for Chromium (W10)
+- [x] Tracker/analytics domain blocking (W10)
+- [x] Anthropic vision format detection fix (W10)
+
 ### Phase 6: Hardening
-- [ ] Comprehensive test suite
+- [x] Unit test suite — 176 tests across all modules
 - [ ] Error handling improvements
 - [ ] Monitoring and alerting
 - [ ] Performance optimization
