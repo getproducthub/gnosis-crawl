@@ -8,6 +8,15 @@ from datetime import datetime
 
 
 # Request Models
+
+class ProxyConfig(BaseModel):
+    """Proxy configuration for per-request proxy override."""
+    server: str
+    username: Optional[str] = None
+    password: Optional[str] = None
+    bypass: Optional[str] = None
+
+
 class CrawlOptions(BaseModel):
     """Options for crawling configuration"""
     javascript: bool = True
@@ -21,6 +30,7 @@ class CrawlOptions(BaseModel):
     wait_for_selector: Optional[str] = None
     wait_after_load_ms: int = Field(default=1000, ge=0, le=60000)
     retry_with_js_if_thin: bool = False
+    proxy: Optional[ProxyConfig] = None
 
 
 class CrawlRequest(BaseModel):
@@ -298,6 +308,7 @@ class GhostExtractRequest(BaseModel):
     url: str = Field(..., min_length=1)
     timeout: int = Field(default=30, ge=5, le=120)
     prompt: Optional[str] = None
+    proxy: Optional[ProxyConfig] = None
 
 
 class GhostExtractResponse(BaseModel):

@@ -20,6 +20,7 @@ from app.models import (
     GhostExtractRequest, GhostExtractResponse,
 )
 from app.storage import CrawlStorageService
+from app.proxy import resolve_proxy
 
 logger = logging.getLogger(__name__)
 
@@ -173,12 +174,15 @@ async def agent_ghost(request: GhostExtractRequest):
             detail=f"Failed to initialize vision provider: {exc}",
         )
 
+    proxy = resolve_proxy(getattr(request, 'proxy', None))
+
     result = await run_ghost_protocol(
         request.url,
         provider=provider,
         max_width=settings.agent_ghost_max_image_width,
         timeout=request.timeout,
         prompt=request.prompt or GHOST_EXTRACTION_PROMPT,
+        proxy=proxy,
     )
 
     return GhostExtractResponse(

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     enable_screenshots: bool = False
     
     # Browser Configuration
+    browser_engine: str = "chromium"  # "chromium" or "camoufox"
     browser_headless: bool = True
     browser_timeout: int = 30000
     
@@ -73,7 +74,17 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-3-5-sonnet-latest"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b-instruct"
-    
+
+    # Proxy Configuration
+    proxy_server: Optional[str] = None
+    proxy_username: Optional[str] = None
+    proxy_password: Optional[str] = None
+    proxy_bypass: str = ""
+
+    # Stealth Configuration
+    stealth_enabled: bool = False
+    block_tracking_domains: bool = False
+
     class Config:
         env_file = ".env"
         case_sensitive = False
@@ -108,6 +119,19 @@ class Settings(BaseSettings):
         if not self.agent_allowed_domains:
             return []
         return [d.strip() for d in self.agent_allowed_domains.split(",") if d.strip()]
+
+    def get_proxy_config(self) -> Optional[dict]:
+        """Return Playwright-compatible proxy dict or None."""
+        if not self.proxy_server:
+            return None
+        config = {"server": self.proxy_server}
+        if self.proxy_username:
+            config["username"] = self.proxy_username
+        if self.proxy_password:
+            config["password"] = self.proxy_password
+        if self.proxy_bypass:
+            config["bypass"] = self.proxy_bypass
+        return config
 
     def build_run_config(self):
         """Build a RunConfig from current settings. Imported lazily to avoid circular deps."""
