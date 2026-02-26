@@ -149,6 +149,8 @@ The MCP bridge exposes all capabilities to any MCP-compatible host:
 | `agent_run` | Submit task to autonomous agent (Mode B) | Live |
 | `agent_status` | Check agent run status | Live |
 | `ghost_extract` | Ghost Protocol: screenshot + vision AI extraction | Live |
+| `mesh_peers` | List mesh peers and their health/load status | Live |
+| `mesh_status` | Get this node's mesh status and load metrics | Live |
 | `set_auth_token` | Save auth token to .wraithenv | Live |
 | `crawl_status` | Report configuration and connection | Live |
 

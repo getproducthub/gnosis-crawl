@@ -28,6 +28,8 @@ Tools:
   - crawl_remote_search: fuzzy search against crawler service cache
   - crawl_remote_cache_list: list crawler service cache entries
   - crawl_remote_cache_doc: fetch one cached document by id from service
+  - mesh_peers: list mesh peers and their health/load status
+  - mesh_status: get this node's mesh status and load metrics
 
 JavaScript Injection for Markdown Extraction:
   - For crawl_url and crawl_batch: pass javascript_payload to inject code
@@ -1526,6 +1528,108 @@ async def ghost_extract(
                     return {
                         "success": False,
                         "error": "Ghost Protocol is disabled on the server. Set AGENT_GHOST_ENABLED=true.",
+                        "status": resp.status,
+                    }
+                return {"success": False, "error": f"{resp.status}: {text}", "status": resp.status}
+    except Exception as e:
+        return {"success": False, "error": str(e), "endpoint": endpoint}
+
+
+@mcp.tool()
+async def mesh_peers(
+    server_url: Optional[str] = None,
+    timeout: int = 15,
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    """
+    List known mesh peers and their health status.
+
+    Returns this node's identity plus all peers it knows about, including
+    health status, load metrics, and capabilities. Use this to understand
+    the mesh topology and which nodes are available.
+
+    Requires MESH_ENABLED=true on the crawler.
+
+    Endpoint:
+      GET {base}/mesh/peers
+
+    Args:
+        server_url: Optional crawler base URL override.
+        timeout: HTTP timeout seconds.
+        ctx: MCP context (optional).
+
+    Returns:
+        Dict with node_id, node_name, peer_count, and peers list.
+        Each peer includes node_id, node_name, advertise_url, tools,
+        capabilities, healthy, missed_heartbeats, load metrics.
+    """
+    base = _resolve_base_url(server_url)
+    endpoint = f"{base}/mesh/peers"
+
+    try:
+        timeout_cfg = aiohttp.ClientTimeout(total=max(5, int(timeout)))
+        async with aiohttp.ClientSession(timeout=timeout_cfg) as session:
+            async with session.get(endpoint, headers=_auth_headers()) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    data.setdefault("success", True)
+                    return data
+                text = await resp.text()
+                if resp.status == 503:
+                    return {
+                        "success": False,
+                        "error": "Mesh is not enabled on the server. Set MESH_ENABLED=true.",
+                        "status": resp.status,
+                    }
+                return {"success": False, "error": f"{resp.status}: {text}", "status": resp.status}
+    except Exception as e:
+        return {"success": False, "error": str(e), "endpoint": endpoint}
+
+
+@mcp.tool()
+async def mesh_status(
+    server_url: Optional[str] = None,
+    timeout: int = 15,
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    """
+    Get this node's mesh status including load metrics.
+
+    Returns the node's identity, advertise URL, capabilities, current load
+    (active crawls, agent runs, browser pool), and peer counts. Use this
+    to check if a node is healthy and how busy it is.
+
+    Requires MESH_ENABLED=true on the crawler.
+
+    Endpoint:
+      GET {base}/mesh/status
+
+    Args:
+        server_url: Optional crawler base URL override.
+        timeout: HTTP timeout seconds.
+        ctx: MCP context (optional).
+
+    Returns:
+        Dict with node_id, node_name, advertise_url, tools, capabilities,
+        load (active_crawls, active_agent_runs, browser_pool_free,
+        max_concurrent_crawls), total_peers, healthy_peers.
+    """
+    base = _resolve_base_url(server_url)
+    endpoint = f"{base}/mesh/status"
+
+    try:
+        timeout_cfg = aiohttp.ClientTimeout(total=max(5, int(timeout)))
+        async with aiohttp.ClientSession(timeout=timeout_cfg) as session:
+            async with session.get(endpoint, headers=_auth_headers()) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    data.setdefault("success", True)
+                    return data
+                text = await resp.text()
+                if resp.status == 503:
+                    return {
+                        "success": False,
+                        "error": "Mesh is not enabled on the server. Set MESH_ENABLED=true.",
                         "status": resp.status,
                     }
                 return {"success": False, "error": f"{resp.status}: {text}", "status": resp.status}
