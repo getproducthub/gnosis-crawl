@@ -40,6 +40,7 @@ case "$TARGET" in
     echo "==> Building image..."
     docker build ${REBUILD} -t "${SERVICE_NAME}:${TAG}" .
     echo "==> Starting single node..."
+    docker-compose -f docker-compose.mesh.yml down 2>/dev/null || true
     docker-compose down 2>/dev/null || true
     docker-compose up -d
     echo ""
@@ -55,6 +56,7 @@ case "$TARGET" in
     echo "==> Building image..."
     docker build ${REBUILD} -t "${SERVICE_NAME}:${TAG}" .
     echo "==> Starting 2-node mesh..."
+    docker-compose down 2>/dev/null || true
     docker-compose -f docker-compose.mesh.yml down 2>/dev/null || true
     docker-compose -f docker-compose.mesh.yml up -d --build
     echo ""

@@ -115,6 +115,8 @@ switch ($Target) {
     "local" {
         Write-Host "==> Deploying single node locally..." -ForegroundColor Yellow
 
+        # Stop mesh compose first (shares port 6792)
+        docker-compose -f docker-compose.mesh.yml down 2>$null
         docker-compose down 2>$null
 
         try {
@@ -141,6 +143,8 @@ switch ($Target) {
     "mesh" {
         Write-Host "==> Deploying 2-node mesh locally..." -ForegroundColor Yellow
 
+        # Stop single-node compose first (shares port 6792)
+        docker-compose down 2>$null
         docker-compose -f docker-compose.mesh.yml down 2>$null
 
         try {
