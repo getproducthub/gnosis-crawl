@@ -219,12 +219,29 @@ class MeshCoordinator:
     # ------------------------------------------------------------------
 
     async def _heartbeat_loop(self) -> None:
-        """Periodically heartbeat all known peers and cull stale ones."""
+        """Periodically heartbeat all known peers and cull stale ones.
+
+        When the peer table is empty, re-attempt joining seed peers so
+        that nodes that start simultaneously can eventually discover
+        each other.
+        """
         while self._running:
             try:
                 await asyncio.sleep(self.heartbeat_interval_s)
                 if not self._running:
                     break
+
+                # Re-try seed joins if we have no peers
+                if not self._peers and self.seed_peers:
+                    logger.debug("No peers known — retrying seed joins")
+                    results = await asyncio.gather(
+                        *(self._join_peer(url) for url in self.seed_peers),
+                        return_exceptions=True,
+                    )
+                    joined = sum(1 for r in results if r is True)
+                    if joined:
+                        logger.info("Seed retry: joined %d/%d peers", joined, len(self.seed_peers))
+
                 await self._send_heartbeats()
                 self._cull_stale_peers()
             except asyncio.CancelledError:
