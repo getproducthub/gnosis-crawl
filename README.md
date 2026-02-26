@@ -16,13 +16,13 @@
 
 <br/>
 
-**The world's only agentic web crawler.**
+**The world's only agentic web crawler with a peer-to-peer mesh.**
 
 *Built using the brain of a human that knows about distributed crawling architectures.*
 
 <br/>
 
-<a href="#api-endpoints">Endpoints</a> · <a href="#anti-detection">Anti-Detection</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#live-stream">Live Stream</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
+<a href="#api-endpoints">Endpoints</a> · <a href="#mesh">Mesh</a> · <a href="#anti-detection">Anti-Detection</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#live-stream">Live Stream</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
 
 ---
 
@@ -53,6 +53,7 @@ We integrated features from every major crawler — then added what none of them
 | **Prompt injection defense** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **quarantine + visible-text diff** |
 | **License** | Apache 2.0 | AGPL-3.0 | MIT (Crawlee) | BSD | MIT (Stagehand) | Proprietary | **Proprietary** |
 | **Pricing** | Free | Free–$333/mo | Free–$999/mo | Free | Free–$99/mo | Usage-based | **Self-hosted** |
+| **Mesh P2P** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **agents talking to agents** |
 
 **Only Grub Crawler has Ghost Protocol** — automatic vision-based fallback that screenshots blocked pages and extracts content via LLM when every other tool just fails. Prevention (Camoufox + proxy + stealth) handles 95% of blocks. Ghost Protocol handles the rest.
 
@@ -111,11 +112,22 @@ We integrated features from every major crawler — then added what none of them
 | `GET`  | `/stream/{session_id}/status` | Stream session status | Live |
 | `GET`  | `/stream/pool/status` | Browser pool status | Live |
 
+### Mesh
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `POST` | `/mesh/join` | Peer join + gossip discovery | Live |
+| `POST` | `/mesh/heartbeat` | Peer heartbeat with load metrics | Live |
+| `POST` | `/mesh/execute` | Cross-node tool execution (1-hop max) | Live |
+| `POST` | `/mesh/leave` | Peer departure notification | Live |
+| `GET`  | `/mesh/peers` | List known peers + health status | Live |
+| `GET`  | `/mesh/status` | This node's mesh status + load | Live |
+
 ### System
 | Method | Path | Description | Status |
 |--------|------|-------------|--------|
-| `GET`  | `/health` | Health check + tool count | Live |
+| `GET`  | `/health` | Health check + tool count + mesh info | Live |
 | `GET`  | `/tools` | List registered AHP tools | Live |
+| `GET`  | `/site` | Embedded landing page | Live |
 | `GET`  | `/{tool_name}` | Execute AHP tool (catch-all) | Live |
 
 ## MCP Tools (grub-crawl.py)
@@ -186,6 +198,17 @@ The MCP bridge exposes all capabilities to any MCP-compatible host:
 |------|---------|--------|
 | `stealth.py` | playwright-stealth patches, tracker domain blocking | Done |
 | `proxy.py` | Per-request proxy resolution with env fallback | Done |
+
+### Mesh (`app/mesh/`)
+| File | Purpose | Status |
+|------|---------|--------|
+| `models.py` | Wire protocol models: NodeInfo, NodeLoad, MeshToolRequest/Response, PeerState | Done |
+| `auth.py` | HMAC-SHA256 token signing/verification with 60s TTL | Done |
+| `client.py` | httpx async client for join, heartbeat, leave, execute_tool | Done |
+| `coordinator.py` | Lifecycle, peer table, heartbeat loop with seed retry | Done |
+| `routes.py` | `/mesh/*` endpoints — join, heartbeat, execute, leave, peers, status | Done |
+| `router.py` | Load scoring + target selection (pure logic, no I/O) | Done |
+| `dispatcher.py` | MeshDispatcher wrapping local Dispatcher for transparent routing | Done |
 
 ### Infrastructure
 | File | Purpose | Status |
@@ -278,6 +301,74 @@ This bypasses DOM-based anti-bot detection entirely.
 
 Requires `AGENT_GHOST_ENABLED=true`. Auto-triggers on detected blocks when `AGENT_GHOST_AUTO_TRIGGER=true`.
 
+## Mesh
+
+Agents talking to agents. Every Grub instance is both a worker and a coordinator. Local node offloads to cloud, cloud delegates to local. Tool calls cross the wire transparently.
+
+```
+Node A (local)                    Node B (cloud)
+┌─────────────┐                  ┌─────────────┐
+│ AgentEngine  │                  │ AgentEngine  │
+│     ↓        │                  │     ↓        │
+│ MeshDispatcher ──── HTTP ────→ MeshDispatcher │
+│     ↓        │                  │     ↓        │
+│ Dispatcher   │                  │ Dispatcher   │
+│     ↓        │                  │     ↓        │
+│ ToolRegistry │                  │ ToolRegistry │
+└─────────────┘                  └─────────────┘
+       ↕ heartbeat (15s)                ↕
+       └────────────────────────────────┘
+```
+
+**How it works:**
+- **Discovery** — nodes join via seed peer list, then gossip (1-hop) to learn about others
+- **Heartbeat** — every 15s, nodes exchange load metrics. 3 missed = unhealthy. 2 min = removed
+- **Routing** — MeshDispatcher scores all nodes by load, locality, and affinity, then routes tool calls to the best node
+- **1-hop max** — Node A → B only, never A → B → C. Prevents routing loops
+- **Local fallback** — if remote execution fails, falls back to local Dispatcher
+- **HMAC auth** — all mesh traffic is signed with a shared secret (SHA-256, 60s TTL)
+
+### Run a 2-Node Mesh Locally
+
+```bash
+# Docker Compose (recommended)
+./deploy.sh mesh           # Linux/Mac
+./deploy.ps1 -Target mesh  # Windows
+
+# Verify
+curl http://localhost:6792/mesh/peers  # Node A sees Node B
+curl http://localhost:6793/mesh/peers  # Node B sees Node A
+```
+
+### Connect Local to Cloud Run
+
+```bash
+# Deploy to Cloud Run with mesh
+./deploy.sh cloudrun latest --mesh-peer http://your-local-ip:6792 --mesh-secret mysecret
+
+# Start local node
+MESH_ENABLED=true MESH_SECRET=mysecret MESH_PEERS=https://your-cloud-run-url \
+  MESH_ADVERTISE_URL=http://your-local-ip:8080 \
+  uvicorn app.main:app --port 8080
+```
+
+### Manual Setup
+
+```bash
+# Node A
+MESH_ENABLED=true MESH_NODE_NAME=local MESH_SECRET=test123 \
+  MESH_ADVERTISE_URL=http://localhost:8080 \
+  uvicorn app.main:app --port 8080
+
+# Node B
+MESH_ENABLED=true MESH_NODE_NAME=cloud MESH_SECRET=test123 \
+  MESH_PEERS=http://localhost:8080 \
+  MESH_ADVERTISE_URL=http://localhost:8081 \
+  uvicorn app.main:app --port 8081
+```
+
+When mesh is disabled (`MESH_ENABLED=false`, the default), Grub operates as a normal single-node crawler with zero mesh overhead.
+
 ## Live Stream
 
 Watch the crawler work in real-time. A persistent pool of warm Chromium instances streams viewport frames over WebSocket or MJPEG.
@@ -335,6 +426,22 @@ curl -X POST http://localhost:8080/api/agent/run \
     "max_steps": 10,
     "allowed_domains": ["example.com"]
   }'
+```
+
+### Docker
+
+```bash
+# Single node
+./deploy.sh local            # or ./deploy.ps1 -Target local
+
+# 2-node mesh
+./deploy.sh mesh             # or ./deploy.ps1 -Target mesh
+
+# Cloud Run
+./deploy.sh cloudrun v1.0.0  # or ./deploy.ps1 -Target cloudrun -Tag v1.0.0
+
+# Cloud Run + mesh (connect to local node)
+./deploy.sh cloudrun v1.0.0 --mesh-peer http://your-ip:6792 --mesh-secret mykey
 ```
 
 ### Anti-Detection (Camoufox + Proxy)
@@ -434,6 +541,18 @@ open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
 - `AGENT_GHOST_VISION_PROVIDER` — inherits from AGENT_PROVIDER
 - `AGENT_GHOST_MAX_IMAGE_WIDTH` (default: 1280)
 
+### Mesh
+- `MESH_ENABLED` (default: false) — master switch
+- `MESH_PEERS` — comma-separated seed peer URLs
+- `MESH_NODE_NAME` — human-readable name (default: hostname)
+- `MESH_SECRET` — shared HMAC secret for inter-node auth
+- `MESH_ADVERTISE_URL` — URL peers use to reach this node
+- `MESH_PREFER_LOCAL` (default: true) — bias toward local execution
+- `MESH_HEARTBEAT_INTERVAL_S` (default: 15)
+- `MESH_PEER_TIMEOUT_S` (default: 45) — mark unhealthy after this
+- `MESH_PEER_REMOVE_S` (default: 120) — remove from peer table after this
+- `MESH_REMOTE_TIMEOUT_MS` (default: 35000) — timeout for remote tool calls
+
 ### Live Stream
 - `BROWSER_POOL_SIZE` (default: 1)
 - `BROWSER_STREAM_ENABLED` (default: false)
@@ -502,7 +621,17 @@ Do not summarize unless `content_quality == "sufficient"`.
 - [x] Tracker/analytics domain blocking (W10)
 - [x] Anthropic vision format detection fix (W10)
 
-### Phase 6: Hardening
+### Phase 6: Mesh Coordinator ✅
+- [x] Peer discovery with gossip (1-hop) (W11)
+- [x] HMAC-SHA256 inter-node auth (W11)
+- [x] Heartbeat loop with load metrics + seed retry (W11)
+- [x] MeshDispatcher — transparent cross-node tool routing (W12)
+- [x] Load-based scoring with locality/affinity bonus (W12)
+- [x] Deploy scripts — local, mesh, Cloud Run (W12)
+- [x] Docker Compose 2-node mesh topology (W12)
+- [x] Embedded landing page (grub-site) (W12)
+
+### Phase 7: Hardening
 - [x] Unit test suite — 176 tests across all modules
 - [ ] Error handling improvements
 - [ ] Monitoring and alerting

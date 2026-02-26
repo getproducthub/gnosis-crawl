@@ -18,10 +18,8 @@ Added flexible customer identification system that supports both authenticated a
 1. **app/models.py** - Added `customer_id: Optional[str] = None` to request models
 2. **app/auth.py** - Added `get_customer_identifier()` helper function
 3. **app/routes.py** - Updated all endpoints to support optional customer_id
-4. **app/config.py** - Already had `disable_auth` flag for Porter deployments
-5. **.env.porter** - Created minimal config for unauthenticated deployments
-6. **Dockerfile** - Added ARG declarations to suppress Porter warnings
-7. **README.md** - Comprehensive documentation of customer ID feature
+4. **app/config.py** - Already had `disable_auth` flag for unauthenticated deployments
+5. **README.md** - Comprehensive documentation of customer ID feature
 8. **.gitignore** - Added `*_versions/` and `*.backup` patterns
 
 ## Architecture
@@ -78,7 +76,7 @@ storage/
 ### Why Optional customer_id?
 - **Flexibility**: Support both authenticated SaaS and unauthenticated self-hosted deployments
 - **Multi-tenancy**: Allow custom storage partitioning even with auth
-- **Porter/Kubernetes**: Enable deployments without gnosis-auth dependency
+- **Self-hosted**: Enable deployments without gnosis-auth dependency
 
 ### Why Hash Customer IDs?
 - **Privacy**: Doesn't expose actual email/customer_id in file paths
@@ -119,7 +117,7 @@ storage/
 ### Deployment Configs
 
 - **.env** - Local development (not in git)
-- **.env.porter** - Porter/Kubernetes deployment (no auth)
+- **.env.mesh** - Mesh coordinator configuration reference
 - **.env.example** - Template for new deployments
 
 ## Common Development Tasks
@@ -159,10 +157,6 @@ Valid config keys have changed in V2: 'fields' has been removed
 ```
 **Status**: Harmless warning from config.py Config class
 **Fix**: Update to Pydantic V2 config pattern (low priority)
-
-### Porter Build Args Warning
-Porter passes env vars as build args, causing warnings.
-**Status**: Fixed by adding ARG declarations in Dockerfile
 
 ### Auth Middleware Order
 The middleware checks for `disable_auth` flag BEFORE attempting to load auth_client.
@@ -214,23 +208,24 @@ python test_remote_api.py
 
 ## Deployment
 
-### Porter/Kubernetes
-1. Use `.env.porter` configuration
-2. Set `DISABLE_AUTH=true` for public access
-3. Build image: `docker build -t gnosis-crawl:latest .`
-4. Push to registry
-5. Deploy via Porter UI or kubectl
-
-**Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port 8080`
-
-### Google Cloud Run
-```powershell
-./deploy.ps1 -Target cloudrun -Tag v1.0.0
+### Local Docker
+```bash
+./deploy.sh local            # or ./deploy.ps1 -Target local
 ```
 
-### Local Docker
-```powershell
-./deploy.ps1 -Target local
+### 2-Node Mesh
+```bash
+./deploy.sh mesh             # or ./deploy.ps1 -Target mesh
+```
+
+### Google Cloud Run
+```bash
+./deploy.sh cloudrun v1.0.0  # or ./deploy.ps1 -Target cloudrun -Tag v1.0.0
+```
+
+### Cloud Run + Mesh
+```bash
+./deploy.sh cloudrun v1.0.0 --mesh-peer http://your-ip:6792 --mesh-secret mykey
 ```
 
 ## Security Considerations
