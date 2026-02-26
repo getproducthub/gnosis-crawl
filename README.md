@@ -266,7 +266,7 @@ PROXY_USERNAME=your_username
 PROXY_PASSWORD=your_password
 
 # Or per-request
-curl -X POST http://localhost:8080/api/crawl \
+curl -X POST http://localhost:6792/api/crawl \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://example.com",
@@ -350,8 +350,8 @@ curl http://localhost:6793/mesh/peers  # Node B sees Node A
 
 # Start local node
 MESH_ENABLED=true MESH_SECRET=mysecret MESH_PEERS=https://your-cloud-run-url \
-  MESH_ADVERTISE_URL=http://your-local-ip:8080 \
-  uvicorn app.main:app --port 8080
+  MESH_ADVERTISE_URL=http://your-local-ip:6792 \
+  uvicorn app.main:app --port 6792
 ```
 
 ### Manual Setup
@@ -359,12 +359,12 @@ MESH_ENABLED=true MESH_SECRET=mysecret MESH_PEERS=https://your-cloud-run-url \
 ```bash
 # Node A
 MESH_ENABLED=true MESH_NODE_NAME=local MESH_SECRET=test123 \
-  MESH_ADVERTISE_URL=http://localhost:8080 \
-  uvicorn app.main:app --port 8080
+  MESH_ADVERTISE_URL=http://localhost:6792 \
+  uvicorn app.main:app --port 6792
 
 # Node B
 MESH_ENABLED=true MESH_NODE_NAME=cloud MESH_SECRET=test123 \
-  MESH_PEERS=http://localhost:8080 \
+  MESH_PEERS=http://localhost:6792 \
   MESH_ADVERTISE_URL=http://localhost:8081 \
   uvicorn app.main:app --port 8081
 ```
@@ -377,7 +377,7 @@ Watch the crawler work in real-time. A persistent pool of warm Chromium instance
 
 **WebSocket** — connect and send interactive commands:
 ```javascript
-const ws = new WebSocket("ws://localhost:8080/stream/my-session?url=https://example.com");
+const ws = new WebSocket("ws://localhost:6792/stream/my-session?url=https://example.com");
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   if (msg.type === "frame") document.getElementById("viewport").src = "data:image/jpeg;base64," + msg.data;
@@ -390,7 +390,7 @@ ws.send(JSON.stringify({ action: "scroll", direction: "down" }));
 
 **MJPEG** — drop it in an `<img>` tag, instant video:
 ```html
-<img src="http://localhost:8080/stream/my-session/mjpeg?url=https://example.com" />
+<img src="http://localhost:6792/stream/my-session/mjpeg?url=https://example.com" />
 ```
 
 Requires `BROWSER_STREAM_ENABLED=true`. Each Chromium instance uses ~150-300MB RAM.
@@ -404,7 +404,7 @@ git clone <repo>
 cd grub-crawl
 cp .env.example .env
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+uvicorn app.main:app --reload --host 0.0.0.0 --port 6792
 ```
 
 ### Enable Agent Mode B
@@ -421,7 +421,7 @@ AGENT_PROVIDER=anthropic
 ### Submit an Agent Task
 
 ```bash
-curl -X POST http://localhost:8080/api/agent/run \
+curl -X POST http://localhost:6792/api/agent/run \
   -H "Content-Type: application/json" \
   -d '{
     "task": "Find the pricing page on example.com and extract plan details",
@@ -466,7 +466,7 @@ PROXY_PASSWORD=your_password
 # Add to .env
 AGENT_GHOST_ENABLED=true
 
-curl -X POST http://localhost:8080/api/agent/ghost \
+curl -X POST http://localhost:6792/api/agent/ghost \
   -H "Content-Type: application/json" \
   -d '{"url": "https://blocked-site.com"}'
 ```
@@ -479,14 +479,14 @@ BROWSER_STREAM_ENABLED=true
 BROWSER_POOL_SIZE=2
 
 # MJPEG (open in browser)
-open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
+open "http://localhost:6792/stream/demo/mjpeg?url=https://example.com"
 ```
 
 ## Configuration
 
 ### Server
 - `HOST` (default: 0.0.0.0)
-- `PORT` (default: 8080)
+- `PORT` (default: 6792)
 - `DEBUG` (default: false)
 
 ### Storage

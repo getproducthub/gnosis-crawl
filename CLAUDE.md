@@ -94,7 +94,7 @@ storage/
 
 **Server:**
 - `HOST` - Server host (default: 0.0.0.0)
-- `PORT` - Server port (default: 8080)
+- `PORT` - Server port (default: 6792)
 - `DEBUG` - Debug mode (default: false)
 
 **Storage:**
@@ -128,7 +128,7 @@ storage/
 pip install -r requirements.txt
 
 # Run with uvicorn
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+uvicorn app.main:app --reload --host 0.0.0.0 --port 6792
 ```
 
 ### Building Docker Image
@@ -293,14 +293,14 @@ Currently NO validation on customer_id format. Consider adding:
 ### Testing Authenticated Request
 ```bash
 curl -H "Authorization: Bearer <token>" \
-     -X POST http://localhost:8080/api/crawl \
+     -X POST http://localhost:6792/api/crawl \
      -H "Content-Type: application/json" \
      -d '{"url": "https://example.com"}'
 ```
 
 ### Testing Unauthenticated Request
 ```bash
-curl -X POST http://localhost:8080/api/crawl \
+curl -X POST http://localhost:6792/api/crawl \
      -H "Content-Type: application/json" \
      -d '{
        "url": "https://example.com",
@@ -310,7 +310,7 @@ curl -X POST http://localhost:8080/api/crawl \
 
 ### Getting Session Files
 ```bash
-curl "http://localhost:8080/api/sessions/{session_id}/files?customer_id=test-client-123"
+curl "http://localhost:6792/api/sessions/{session_id}/files?customer_id=test-client-123"
 ```
 
 ---

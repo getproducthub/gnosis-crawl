@@ -45,11 +45,11 @@ RUN mkdir -p storage && chown -R app:app storage
 USER app
 
 # Expose port
-EXPOSE 8080
+EXPOSE 6792
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:6792/health || exit 1
 
 # Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "6792"]

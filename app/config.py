@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     # Server Configuration
     host: str = "0.0.0.0"
-    port: int = 8080
+    port: int = 6792
     debug: bool = False
     
     # Storage Configuration

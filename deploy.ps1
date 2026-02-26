@@ -274,8 +274,8 @@ switch ($Target) {
                 Write-Host ""
                 Write-Host "    To connect your local node:" -ForegroundColor Yellow
                 Write-Host "    MESH_ENABLED=true MESH_SECRET=$MeshSecret MESH_PEERS=$ServiceUrl \" -ForegroundColor Yellow
-                Write-Host "      MESH_ADVERTISE_URL=http://your-local-ip:8080 \" -ForegroundColor Yellow
-                Write-Host "      uvicorn app.main:app --port 8080" -ForegroundColor Yellow
+                Write-Host "      MESH_ADVERTISE_URL=http://your-local-ip:6792 \" -ForegroundColor Yellow
+                Write-Host "      uvicorn app.main:app --port 6792" -ForegroundColor Yellow
             }
         }
         catch {

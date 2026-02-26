@@ -134,8 +134,8 @@ case "$TARGET" in
         echo "    Peers:    ${SERVICE_URL}/mesh/peers"
         echo "    To connect local node:"
         echo "    MESH_ENABLED=true MESH_SECRET=${MESH_SECRET} MESH_PEERS=${SERVICE_URL} \\"
-        echo "      MESH_ADVERTISE_URL=http://your-local-ip:8080 \\"
-        echo "      uvicorn app.main:app --port 8080"
+        echo "      MESH_ADVERTISE_URL=http://your-local-ip:6792 \\"
+        echo "      uvicorn app.main:app --port 6792"
     fi
     ;;
 
