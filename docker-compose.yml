@@ -41,6 +41,7 @@ services:
       - ./site:/app/site  # Embedded landing page
     networks:
       - gnosis-network
+      - codex-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -58,3 +59,5 @@ networks:
   gnosis-network:
     name: gnosis_network
     driver: bridge
+  codex-network:
+    external: true
