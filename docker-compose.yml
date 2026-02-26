@@ -29,9 +29,16 @@ services:
       # - PROXY_USERNAME=your_username
       # - PROXY_PASSWORD=your_password
       # - PROXY_BYPASS=localhost,127.0.0.1
+      # Mesh (uncomment to enable — see docker-compose.mesh.yml for 2-node setup)
+      # - MESH_ENABLED=true
+      # - MESH_NODE_NAME=local
+      # - MESH_ADVERTISE_URL=http://gnosis-crawl:8080
+      # - MESH_SECRET=changeme
+      # - MESH_PEERS=
     volumes:
       - gnosis_shared_storage:/app/storage
       - ./app:/app/app  # Mount for development hot reload
+      - ./site:/app/site  # Embedded landing page
     networks:
       - gnosis-network
     restart: unless-stopped

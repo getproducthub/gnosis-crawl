@@ -15,6 +15,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+from pathlib import Path
+
 from app.config import settings
 from app.routes import router
 from app.job_routes import router as job_router
@@ -23,6 +25,10 @@ from app.tools.tool_registry import get_global_registry, ToolError
 from app.core.middleware import ContentTypeMiddleware, AuthMiddleware
 from app.auth import validate_token_from_query
 from app.crawler import get_crawler_engine
+
+# Resolve site directory (embedded grub-site landing page)
+_SITE_DIR = Path(__file__).resolve().parent.parent / "site"
+_SITE_INDEX = _SITE_DIR / "index.html" if _SITE_DIR.is_dir() else None
 
 # Configure logging
 logging.basicConfig(
@@ -52,6 +58,33 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to discover tools: {e}")
 
+    # Start mesh coordinator (if enabled)
+    if settings.mesh_enabled:
+        try:
+            from app.mesh.coordinator import MeshCoordinator
+            from app.tools.tool_registry import get_global_registry as _get_reg
+
+            _reg = _get_reg()
+            tool_names = [s["name"] for s in _reg.get_schemas()]
+
+            coordinator = MeshCoordinator(
+                node_name=settings.mesh_node_name,
+                advertise_url=settings.mesh_advertise_url,
+                secret=settings.mesh_secret,
+                seed_peers=settings.get_mesh_peers(),
+                heartbeat_interval_s=settings.mesh_heartbeat_interval_s,
+                peer_timeout_s=settings.mesh_peer_timeout_s,
+                peer_remove_s=settings.mesh_peer_remove_s,
+                tools=tool_names,
+                max_concurrent_crawls=settings.max_concurrent_crawls,
+            )
+            app.state.mesh_coordinator = coordinator
+            await coordinator.start()
+            logger.info("Mesh coordinator started: %s (%s)", coordinator.node_name, coordinator.node_id)
+        except Exception as e:
+            logger.error("Failed to start mesh coordinator: %s", e, exc_info=True)
+            app.state.mesh_coordinator = None
+
     # Start browser pool for live streaming (if enabled)
     if settings.browser_stream_enabled:
         try:
@@ -62,6 +95,14 @@ async def lifespan(app: FastAPI):
             logger.error(f"Failed to start browser pool: {e}")
 
     yield
+
+    # Shutdown mesh coordinator
+    if settings.mesh_enabled and getattr(app.state, "mesh_coordinator", None):
+        try:
+            await app.state.mesh_coordinator.stop()
+            logger.info("Mesh coordinator stopped")
+        except Exception as e:
+            logger.error("Error stopping mesh coordinator: %s", e)
 
     # Shutdown
     if settings.browser_stream_enabled:
@@ -174,6 +215,11 @@ app.include_router(router, prefix="/api")
 app.include_router(job_router)  # Job routes already have /api prefix
 app.include_router(agent_router)  # Agent routes already have /api/agent prefix
 
+# Mesh routes (conditional)
+if settings.mesh_enabled:
+    from app.mesh.routes import router as mesh_router
+    app.include_router(mesh_router)
+
 # Live browser stream routes (conditional)
 if settings.browser_stream_enabled:
     from app.stream import router as stream_router
@@ -191,8 +237,17 @@ async def health_check():
             "service": "gnosis-crawl",
             "version": "1.0.0",
             "cloud_mode": settings.is_cloud_environment(),
-            "tools_registered": len(tool_registry.tools)
+            "tools_registered": len(tool_registry.tools),
         }
+        # Add mesh info if enabled
+        coordinator = getattr(app.state, "mesh_coordinator", None)
+        if coordinator:
+            result["mesh"] = {
+                "node_id": coordinator.node_id,
+                "node_name": coordinator.node_name,
+                "peers": len(coordinator.get_peers()),
+                "healthy_peers": len(coordinator.get_healthy_peers()),
+            }
         logger.debug(f"Health endpoint returning: {result}")
         return result
     except Exception as e:
@@ -322,6 +377,15 @@ async def list_tools():
 #     - Context-aware tool selection
 #     """
 #     pass
+
+# Embedded landing page (grub-site) — served at /site
+if _SITE_INDEX and _SITE_INDEX.is_file():
+    _site_html = _SITE_INDEX.read_text(encoding="utf-8")
+
+    @app.get("/site", response_class=HTMLResponse)
+    async def serve_site():
+        """Serve the embedded Grub landing page."""
+        return HTMLResponse(content=_site_html, status_code=200)
 
 # AHP Tool Routes - Dynamic tool execution (CATCH-ALL - must be last)
 @app.get("/{tool_name}")

@@ -61,6 +61,9 @@ RUN python -m camoufox fetch
 # Copy application code
 COPY app/ ./app/
 
+# Copy embedded landing page (grub-site)
+COPY site/ ./site/
+
 # Create storage directory
 RUN mkdir -p storage && chown -R app:app storage
 
