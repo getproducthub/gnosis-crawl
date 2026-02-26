@@ -396,102 +396,171 @@ function Hero({ introDone, onIntroDone, skipIntro }) {
         backgroundSize: "80px 80px",
       }} />
 
-      <div style={{
-        opacity: loaded ? 1 : 0,
-        transform: loaded ? "translateY(0)" : "translateY(24px)",
-        transition: "all 1s cubic-bezier(.22,1,.36,1) 0.1s",
-        textAlign: "center", position: "relative", zIndex: 1,
+      {/* Two-column hero layout */}
+      <div className="hero-row" style={{
+        display: "flex", alignItems: "center", gap: "clamp(40px, 6vw, 80px)",
+        position: "relative", zIndex: 1, width: "100%",
+        maxWidth: 1200, margin: "0 auto",
       }}>
+        {/* Left: text content */}
         <div style={{
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase",
-          color: "rgba(200,255,0,0.5)", marginBottom: 28,
-          opacity: introDone ? 1 : 0,
-          transform: introDone ? "translateY(0)" : "translateY(8px)",
-          transition: "opacity 1s ease, transform 1s ease",
+          flex: "1 1 55%", minWidth: 0,
+          opacity: loaded ? 1 : 0,
+          transform: loaded ? "translateY(0)" : "translateY(24px)",
+          transition: "all 1s cubic-bezier(.22,1,.36,1) 0.1s",
         }}>
-          Reclaimed &middot; Rebuilt &middot; Distributed
-        </div>
-
-        <h1 style={{
-          fontFamily: "'Space Mono', monospace",
-          fontSize: "clamp(3.2rem, 10vw, 8rem)",
-          fontWeight: 700, letterSpacing: "-0.04em",
-          lineHeight: 0.9, margin: 0,
-          color: "#ffe000",
-          textShadow: "0 0 120px rgba(200,255,0,0.15), 0 0 40px rgba(200,255,0,0.08)",
-        }}>
-          <span className={`hero-mark phase-${bootPhase}`}>{titleText}</span>
-        </h1>
-
-        <div style={{
-          opacity: introDone ? 1 : 0,
-          transform: introDone ? "translateY(0)" : "translateY(12px)",
-          transition: "opacity 1s ease, transform 1s ease",
-          pointerEvents: introDone ? "auto" : "none",
-        }}>
-          <p style={{
-            fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: "clamp(0.85rem, 1.8vw, 1.15rem)",
-            color: "rgba(255,255,255,0.55)", maxWidth: 620,
-            lineHeight: 1.7, margin: "0 auto",
-            letterSpacing: "0.01em",
-          }}>
-            The world's only agentic web crawler with a peer-to-peer mesh.<br />
-            Ghost Protocol &middot; Camoufox &middot; 17 MCP Tools<br />
-            Distributed extraction for hostile web surfaces.
-          </p>
           <div style={{
-            marginTop: 18, fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
-            color: "rgba(255,255,255,0.3)",
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase",
+            color: "rgba(200,255,0,0.5)", marginBottom: 28,
+            opacity: introDone ? 1 : 0,
+            transform: introDone ? "translateY(0)" : "translateY(8px)",
+            transition: "opacity 1s ease, transform 1s ease",
           }}>
-            Python &middot; FastAPI &middot; Playwright &middot; Camoufox &middot; MCP &middot; Mesh P2P
+            Reclaimed &middot; Rebuilt &middot; Distributed
           </div>
 
-          <div style={{
-            display: "flex", gap: 16, justifyContent: "center",
-            marginTop: 48, flexWrap: "wrap",
+          <h1 style={{
+            fontFamily: "'Space Mono', monospace",
+            fontSize: "clamp(3rem, 8vw, 6.5rem)",
+            fontWeight: 700, letterSpacing: "-0.04em",
+            lineHeight: 0.9, margin: 0,
+            color: "#ffe000",
+            textShadow: "0 0 120px rgba(200,255,0,0.15), 0 0 40px rgba(200,255,0,0.08)",
           }}>
-            <button style={{
+            <span className={`hero-mark phase-${bootPhase}`}>{titleText}</span>
+          </h1>
+
+          <div style={{
+            opacity: introDone ? 1 : 0,
+            transform: introDone ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 1s ease, transform 1s ease",
+            pointerEvents: introDone ? "auto" : "none",
+          }}>
+            <p style={{
+              fontFamily: "'Space Mono', monospace",
+              fontSize: "clamp(1rem, 2.2vw, 1.4rem)",
+              color: "rgba(255,255,255,0.7)", maxWidth: 520,
+              lineHeight: 1.5, margin: "24px 0 0",
+              letterSpacing: "-0.01em", fontWeight: 700,
+            }}>
+              Agentic Web Crawling Mesh
+            </p>
+            <p style={{
               fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 13, fontWeight: 600, padding: "14px 36px",
-              background: "#c8ff00", color: "#080808",
-              border: "none", cursor: "pointer",
-              letterSpacing: "0.06em", textTransform: "uppercase",
-              transition: "all 0.25s",
-            }}
-              onClick={() => document.getElementById("try-it")?.scrollIntoView({ behavior: "smooth" })}
-              onMouseEnter={e => { e.target.style.background = "#dfff4f"; e.target.style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { e.target.style.background = "#c8ff00"; e.target.style.transform = "translateY(0)"; }}>
-              Try It
-            </button>
-            <button style={{
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 13, fontWeight: 500, padding: "14px 36px",
-              background: "transparent", color: "rgba(255,255,255,0.6)",
-              border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
-              letterSpacing: "0.06em", textTransform: "uppercase",
-              transition: "all 0.25s",
-            }}
-              onClick={() => document.getElementById("mesh")?.scrollIntoView({ behavior: "smooth" })}
-              onMouseEnter={e => { e.target.style.borderColor = "rgba(0,200,255,0.4)"; e.target.style.color = "#00c8ff"; }}
-              onMouseLeave={e => { e.target.style.borderColor = "rgba(255,255,255,0.12)"; e.target.style.color = "rgba(255,255,255,0.6)"; }}>
-              View Mesh
-            </button>
-            <button style={{
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 13, fontWeight: 500, padding: "14px 36px",
-              background: "transparent", color: "rgba(255,255,255,0.6)",
-              border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
-              letterSpacing: "0.06em", textTransform: "uppercase",
-              transition: "all 0.25s",
-            }}
-              onClick={() => window.open("https://github.com/deepbluedynamics/gnosis-crawl", "_blank", "noopener,noreferrer")}
-              onMouseEnter={e => { e.target.style.borderColor = "rgba(200,255,0,0.4)"; e.target.style.color = "#c8ff00"; }}
-              onMouseLeave={e => { e.target.style.borderColor = "rgba(255,255,255,0.12)"; e.target.style.color = "rgba(255,255,255,0.6)"; }}>
-              GitHub
-            </button>
+              fontSize: "clamp(0.82rem, 1.5vw, 1rem)",
+              color: "rgba(255,255,255,0.45)", maxWidth: 480,
+              lineHeight: 1.7, margin: "16px 0 0",
+              letterSpacing: "0.01em",
+            }}>
+              17 tools for crawling. Ghost protocol.
+            </p>
+            <div style={{
+              marginTop: 20, fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+              color: "rgba(255,255,255,0.3)",
+            }}>
+              Python &middot; FastAPI &middot; Playwright &middot; Camoufox &middot; MCP &middot; Mesh P2P
+            </div>
+
+            <div style={{
+              display: "flex", gap: 14, marginTop: 40, flexWrap: "wrap",
+            }}>
+              <button style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 13, fontWeight: 600, padding: "14px 36px",
+                background: "#c8ff00", color: "#080808",
+                border: "none", cursor: "pointer",
+                letterSpacing: "0.06em", textTransform: "uppercase",
+                transition: "all 0.25s",
+              }}
+                onClick={() => document.getElementById("try-it")?.scrollIntoView({ behavior: "smooth" })}
+                onMouseEnter={e => { e.target.style.background = "#dfff4f"; e.target.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={e => { e.target.style.background = "#c8ff00"; e.target.style.transform = "translateY(0)"; }}>
+                Try It
+              </button>
+              <button style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 13, fontWeight: 500, padding: "14px 36px",
+                background: "transparent", color: "rgba(255,255,255,0.6)",
+                border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
+                letterSpacing: "0.06em", textTransform: "uppercase",
+                transition: "all 0.25s",
+              }}
+                onClick={() => document.getElementById("mesh")?.scrollIntoView({ behavior: "smooth" })}
+                onMouseEnter={e => { e.target.style.borderColor = "rgba(0,200,255,0.4)"; e.target.style.color = "#00c8ff"; }}
+                onMouseLeave={e => { e.target.style.borderColor = "rgba(255,255,255,0.12)"; e.target.style.color = "rgba(255,255,255,0.6)"; }}>
+                View Mesh
+              </button>
+              <button style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 13, fontWeight: 500, padding: "14px 36px",
+                background: "transparent", color: "rgba(255,255,255,0.6)",
+                border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
+                letterSpacing: "0.06em", textTransform: "uppercase",
+                transition: "all 0.25s",
+              }}
+                onClick={() => window.open("https://github.com/deepbluedynamics/gnosis-crawl", "_blank", "noopener,noreferrer")}
+                onMouseEnter={e => { e.target.style.borderColor = "rgba(200,255,0,0.4)"; e.target.style.color = "#c8ff00"; }}
+                onMouseLeave={e => { e.target.style.borderColor = "rgba(255,255,255,0.12)"; e.target.style.color = "rgba(255,255,255,0.6)"; }}>
+                GitHub
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: placeholder image */}
+        <div className="hero-image" style={{
+          flex: "1 1 40%", minWidth: 0,
+          opacity: introDone ? 1 : 0,
+          transform: introDone ? "translateY(0) scale(1)" : "translateY(20px) scale(0.97)",
+          transition: "opacity 1.2s ease 0.2s, transform 1.2s ease 0.2s",
+        }}>
+          <div style={{
+            aspectRatio: "4 / 3",
+            background: "linear-gradient(135deg, rgba(200,255,0,0.04) 0%, rgba(0,200,255,0.04) 50%, rgba(255,154,0,0.03) 100%)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            position: "relative", overflow: "hidden",
+          }}>
+            {/* Decorative mesh grid */}
+            <svg viewBox="0 0 200 150" style={{ width: "80%", height: "auto", opacity: 0.5 }}>
+              {/* Nodes */}
+              <circle cx="40" cy="30" r="6" fill="none" stroke="#c8ff00" strokeWidth="1" opacity="0.6" />
+              <circle cx="160" cy="30" r="6" fill="none" stroke="#00c8ff" strokeWidth="1" opacity="0.6" />
+              <circle cx="100" cy="75" r="8" fill="none" stroke="#c8ff00" strokeWidth="1.5" opacity="0.8" />
+              <circle cx="30" cy="120" r="6" fill="none" stroke="#00c8ff" strokeWidth="1" opacity="0.6" />
+              <circle cx="170" cy="120" r="6" fill="none" stroke="#ff9a00" strokeWidth="1" opacity="0.6" />
+              {/* Edges */}
+              <line x1="46" y1="33" x2="92" y2="72" stroke="#c8ff00" strokeWidth="0.5" opacity="0.3" />
+              <line x1="154" y1="33" x2="108" y2="72" stroke="#00c8ff" strokeWidth="0.5" opacity="0.3" />
+              <line x1="36" y1="117" x2="92" y2="78" stroke="#00c8ff" strokeWidth="0.5" opacity="0.3" />
+              <line x1="164" y1="117" x2="108" y2="78" stroke="#ff9a00" strokeWidth="0.5" opacity="0.3" />
+              <line x1="46" y1="30" x2="154" y2="30" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" strokeDasharray="4 4" />
+              <line x1="36" y1="120" x2="164" y2="120" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" strokeDasharray="4 4" />
+              {/* Center node inner dot */}
+              <circle cx="100" cy="75" r="2.5" fill="#c8ff00" opacity="0.6" />
+              {/* Pulse rings on center */}
+              <circle cx="100" cy="75" r="14" fill="none" stroke="#c8ff00" strokeWidth="0.5" opacity="0.2">
+                <animate attributeName="r" values="14;22;14" dur="3s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.2;0;0.2" dur="3s" repeatCount="indefinite" />
+              </circle>
+              {/* Labels */}
+              <text x="100" y="102" textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="7" fontFamily="monospace">mesh coordinator</text>
+              <text x="40" y="18" textAnchor="middle" fill="rgba(200,255,0,0.35)" fontSize="6" fontFamily="monospace">node-a</text>
+              <text x="160" y="18" textAnchor="middle" fill="rgba(0,200,255,0.35)" fontSize="6" fontFamily="monospace">node-b</text>
+              <text x="30" y="138" textAnchor="middle" fill="rgba(0,200,255,0.35)" fontSize="6" fontFamily="monospace">node-c</text>
+              <text x="170" y="138" textAnchor="middle" fill="rgba(255,154,0,0.35)" fontSize="6" fontFamily="monospace">node-d</text>
+            </svg>
+            <div style={{
+              position: "absolute", bottom: 16, left: 0, right: 0, textAlign: "center",
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+              letterSpacing: "0.1em", textTransform: "uppercase",
+              color: "rgba(255,255,255,0.15)",
+            }}>
+              replace with screenshot or diagram
+            </div>
           </div>
         </div>
       </div>
@@ -1409,6 +1478,9 @@ function GrubSite() {
         @media (max-width: 768px) {
           .nav-desktop { display: none !important; }
           .nav-mobile-btn { display: block !important; }
+          .hero-row { flex-direction: column !important; text-align: center; }
+          .hero-row > div:first-child { align-items: center; }
+          .hero-image { max-width: 400px; width: 100%; margin: 0 auto; }
         }
         @media (min-width: 769px) {
           .nav-mobile-btn { display: none !important; }
