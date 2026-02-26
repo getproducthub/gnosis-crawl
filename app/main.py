@@ -378,6 +378,23 @@ async def list_tools():
 #     """
 #     pass
 
+# Frontend error reporting endpoint (no auth required)
+@app.post("/api/site/error")
+async def site_error_report(request: Request):
+    """Receive frontend error reports from the landing page."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(content={"ok": False}, status_code=400)
+    logger.warning(
+        "Frontend error: %s at %s:%s — %s",
+        body.get("type", "unknown"),
+        body.get("filename", "?"),
+        body.get("lineno", "?"),
+        body.get("message", "(no message)"),
+    )
+    return {"ok": True}
+
 # Embedded landing page (grub-site) — served at /site
 if _SITE_INDEX and _SITE_INDEX.is_file():
     _site_html = _SITE_INDEX.read_text(encoding="utf-8")

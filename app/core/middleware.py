@@ -54,7 +54,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Skip auth for certain paths - CHECK THIS FIRST before any auth client access
         logger.debug(f"AuthMiddleware checking path: '{request.url.path}'")
-        if request.url.path in ["/", "/health", "/tools", "/@search", "/auth", "/docs", "/redoc", "/openapi.json", "/view", "/download"]:
+        if request.url.path in ["/", "/health", "/tools", "/@search", "/auth", "/docs", "/redoc", "/openapi.json", "/view", "/download", "/site", "/api/site/error"]:
             logger.debug(f"Skipping auth for path: {request.url.path}")
             try:
                 response = await call_next(request)
@@ -118,7 +118,7 @@ async def auth_middleware(request: Request, call_next):
     from app.auth import auth_client
 
     # Skip auth for certain paths
-    if request.url.path in ["/", "/health", "/tools", "/@search", "/auth", "/docs", "/redoc", "/openapi.json"]:
+    if request.url.path in ["/", "/health", "/tools", "/@search", "/auth", "/docs", "/redoc", "/openapi.json", "/site", "/api/site/error"]:
         return await call_next(request)
     
     # Extract bearer token from Authorization header
