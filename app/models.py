@@ -1,5 +1,5 @@
 """
-Pydantic models for gnosis-crawl API requests and responses
+Pydantic models for Grub Crawler API requests and responses
 """
 from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, HttpUrl, Field

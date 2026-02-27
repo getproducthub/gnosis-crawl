@@ -1,4 +1,4 @@
-"""Crawling tools for gnosis-crawl agent."""
+"""Crawling tools for Grub Crawler agent."""
 
 import uuid
 import logging
@@ -237,7 +237,7 @@ async def crawler_info() -> Dict[str, Any]:
     from app.config import settings
     
     return {
-        "service": "gnosis-crawl",
+        "service": "grub-crawl",
         "version": "1.0.0",
         "capabilities": {
             "javascript_execution": True,

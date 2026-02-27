@@ -2,8 +2,8 @@
 Remote integration tests for Bearer token authentication
 
 Set these environment variables to run:
-- WRAITH_API_URL (e.g., https://wraith.nuts.services)
-- WRAITH_AUTH_TOKEN (your Bearer token)
+- GRUB_API_URL (e.g., https://grub.nuts.services)
+- GRUB_AUTH_TOKEN (your Bearer token)
 
 Skip if not set.
 """
@@ -15,11 +15,11 @@ import os
 @pytest.fixture
 def api_config():
     """Get API configuration from environment"""
-    url = os.getenv("WRAITH_API_URL")
-    token = os.getenv("WRAITH_AUTH_TOKEN")
+    url = os.getenv("GRUB_API_URL")
+    token = os.getenv("GRUB_AUTH_TOKEN")
 
     if not url:
-        pytest.skip("WRAITH_API_URL must be set")
+        pytest.skip("GRUB_API_URL must be set")
 
     return {
         "url": url.rstrip("/"),

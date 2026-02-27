@@ -1,5 +1,5 @@
 """
-Markdown generation engine for gnosis-crawl
+Markdown generation engine for Grub Crawler
 Ported from gnosis-wraith with enhanced filtering and processing
 """
 import re

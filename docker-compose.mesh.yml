@@ -1,0 +1,106 @@
+# docker-compose.mesh.yml — Two-node mesh for local testing
+#
+# Usage:
+#   docker-compose -f docker-compose.mesh.yml up --build
+#
+# This starts two grub-crawl nodes that discover each other:
+#   Node A (local)  → http://localhost:6792
+#   Node B (cloud)  → http://localhost:6793
+#
+# Verify:
+#   curl http://localhost:6792/mesh/peers   # Should show node-b
+#   curl http://localhost:6793/mesh/peers   # Should show node-a
+#   curl http://localhost:6792/health       # Shows mesh info
+#   curl http://localhost:6792/site         # Landing page
+
+services:
+  node-a:
+    build: .
+    container_name: grub-crawl-node-a
+    ports:
+      - "6792:6792"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=6792
+      - DEBUG=true
+      - STORAGE_PATH=/app/storage
+      - RUNNING_IN_CLOUD=false
+      - DISABLE_AUTH=true
+      - MAX_CONCURRENT_CRAWLS=3
+      - CRAWL_TIMEOUT=60
+      - BROWSER_TIMEOUT=60000
+      - ENABLE_JAVASCRIPT=true
+      - BROWSER_ENGINE=chromium
+      # Mesh
+      - MESH_ENABLED=true
+      - MESH_NODE_NAME=local
+      - MESH_ADVERTISE_URL=http://node-a:6792
+      - MESH_SECRET=grub-mesh-dev
+      - MESH_PEERS=http://node-b:6793
+      - MESH_PREFER_LOCAL=true
+      - MESH_HEARTBEAT_INTERVAL_S=10
+    volumes:
+      - gnosis_storage_a:/app/storage
+      - ./app:/app/app
+      - ./site:/app/site
+    networks:
+      - gnosis-mesh
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6792/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  node-b:
+    build: .
+    container_name: grub-crawl-node-b
+    ports:
+      - "6793:6793"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=6793
+      - DEBUG=true
+      - STORAGE_PATH=/app/storage
+      - RUNNING_IN_CLOUD=false
+      - DISABLE_AUTH=true
+      - MAX_CONCURRENT_CRAWLS=5
+      - CRAWL_TIMEOUT=60
+      - BROWSER_TIMEOUT=60000
+      - ENABLE_JAVASCRIPT=true
+      - BROWSER_ENGINE=chromium
+      # Mesh
+      - MESH_ENABLED=true
+      - MESH_NODE_NAME=cloud
+      - MESH_ADVERTISE_URL=http://node-b:6793
+      - MESH_SECRET=grub-mesh-dev
+      - MESH_PEERS=http://node-a:6792
+      - MESH_PREFER_LOCAL=false
+      - MESH_HEARTBEAT_INTERVAL_S=10
+    volumes:
+      - gnosis_storage_b:/app/storage
+      - ./app:/app/app
+      - ./site:/app/site
+    networks:
+      - gnosis-mesh
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6793/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  gnosis_storage_a:
+    name: gnosis_storage_a
+    driver: local
+  gnosis_storage_b:
+    name: gnosis_storage_b
+    driver: local
+
+networks:
+  gnosis-mesh:
+    name: gnosis_mesh
+    driver: bridge

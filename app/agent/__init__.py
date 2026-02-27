@@ -1,1 +1,1 @@
-"""Agent module for gnosis-crawl internal micro-agent loop."""
+"""Agent module for Grub Crawler internal micro-agent loop."""

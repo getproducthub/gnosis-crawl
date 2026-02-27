@@ -1,5 +1,5 @@
 """
-API routes for gnosis-crawl service
+API routes for Grub Crawler service
 """
 import uuid
 import logging

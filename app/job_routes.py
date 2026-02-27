@@ -1,4 +1,4 @@
-"""Job API routes for gnosis-crawl"""
+"""Job API routes for Grub Crawler"""
 from fastapi import APIRouter, HTTPException, Request, Depends
 from typing import Optional, List
 from pydantic import BaseModel
@@ -49,7 +49,7 @@ class MarkdownJobRequest(BaseModel):
     timeout: Optional[int] = None
     callback_url: Optional[str] = None
 
-class WraithJobRequest(BaseModel):
+class GrubJobRequest(BaseModel):
     prompt: str
     callback_url: str  # Required for AI-driven workflows
     max_urls: int = 10
@@ -72,7 +72,7 @@ class SessionStatusResponse(BaseModel):
 # --- Dependencies ---
 
 async def get_storage_service(user: dict = Depends(get_current_user)) -> CrawlStorageService:
-    user_email = user.get("email", "anonymous@gnosis-crawl.local")
+    user_email = user.get("email", "anonymous@grub-crawl.local")
     return CrawlStorageService(user_email=user_email)
 
 
@@ -93,8 +93,8 @@ async def create_job(
                 status_code=400,
                 detail=f"Invalid job type: {request.job_type}. Valid types: {[t.value for t in JobType]}"
             )
-        
-        user_email = user.get("email", "anonymous@gnosis-crawl.local")
+
+        user_email = user.get("email", "anonymous@grub-crawl.local")
         job_manager = JobManager(storage_service)
         
         job_id = await job_manager.create_job(
@@ -123,16 +123,16 @@ async def create_crawl_job(
 ):
     """Submit a single URL crawl job."""
     try:
-        user_email = user.get("email", "anonymous@gnosis-crawl.local")
+        user_email = user.get("email", "anonymous@grub-crawl.local")
         job_manager = JobManager(storage_service)
-        
+
         # Generate session ID
         import uuid
         session_id = str(uuid.uuid4())
-        
+
         # Get bearer token for callbacks - will need to be passed from request context
         bearer_token = None  # TODO: Get from request context if needed for callbacks
-        
+
         job_id = await job_manager.create_job(
             session_id=session_id,
             job_type=JobType.CRAWL_URL,
@@ -170,16 +170,16 @@ async def create_batch_crawl_job(
         if not request.urls:
             raise HTTPException(status_code=400, detail="URLs list cannot be empty")
         
-        user_email = user.get("email", "anonymous@gnosis-crawl.local")
+        user_email = user.get("email", "anonymous@grub-crawl.local")
         job_manager = JobManager(storage_service)
-        
+
         # Generate session ID
         import uuid
         session_id = str(uuid.uuid4())
-        
+
         # Get bearer token for callbacks - will need to be passed from request context
         bearer_token = None  # TODO: Get from request context if needed for callbacks
-        
+
         job_id = await job_manager.create_job(
             session_id=session_id,
             job_type=JobType.BATCH_CRAWL,
@@ -213,16 +213,16 @@ async def create_markdown_job(
 ):
     """Submit a markdown-only crawl job."""
     try:
-        user_email = user.get("email", "anonymous@gnosis-crawl.local")
+        user_email = user.get("email", "anonymous@grub-crawl.local")
         job_manager = JobManager(storage_service)
-        
+
         # Generate session ID
         import uuid
         session_id = str(uuid.uuid4())
-        
+
         # Get bearer token for callbacks - will need to be passed from request context
         bearer_token = None  # TODO: Get from request context if needed for callbacks
-        
+
         job_id = await job_manager.create_job(
             session_id=session_id,
             job_type=JobType.MARKDOWN_ONLY,
@@ -373,66 +373,66 @@ async def process_job_worker(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/wraith", response_model=CreateJobResponse) 
-async def create_wraith_job(
-    request: WraithJobRequest,
+@router.post("/grub", response_model=CreateJobResponse)
+async def create_grub_job(
+    request: GrubJobRequest,
     user: dict = Depends(get_current_user),
     storage_service: CrawlStorageService = Depends(get_storage_service)
 ):
     """
     AI-driven crawl workflow endpoint.
-    
+
     Example: "crawl 5 urls from hn front page and show funny ai ones"
-    
+
     This endpoint:
     1. Uses AI to interpret the prompt and identify URLs
-    2. Submits a batch crawl job 
+    2. Submits a batch crawl job
     3. Returns job_id for tracking
     4. Sends results via callback when complete
     """
     try:
-        user_email = user.get("email", "anonymous@gnosis-crawl.local")
+        user_email = user.get("email", "anonymous@grub-crawl.local")
         job_manager = JobManager(storage_service)
-        
-        # Generate session ID for this wraith workflow
+
+        # Generate session ID for this grub workflow
         import uuid
         session_id = str(uuid.uuid4())
-        
+
         # Get bearer token for callbacks - will need to be passed from request context
         bearer_token = None  # TODO: Get from request context if needed for callbacks
-        
+
         # TODO: Implement AI interpretation of prompt to extract URLs
         # For now, this is a placeholder that would:
         # 1. Send prompt to OpenAI/Claude/local model
         # 2. Parse response to extract URLs
         # 3. Filter/validate URLs
         # 4. Submit batch crawl job
-        
+
         # Placeholder response - in real implementation this would:
         # - Call AI service to interpret prompt
-        # - Extract URLs from AI response  
+        # - Extract URLs from AI response
         # - Create batch crawl job with those URLs
-        
+
         # For demo purposes, return error indicating this needs AI integration
         raise HTTPException(
-            status_code=501, 
+            status_code=501,
             detail="AI-driven URL extraction not yet implemented. This endpoint needs integration with OpenAI/Claude/local model to interpret prompts and extract URLs."
         )
-        
+
         # This is what the full implementation would look like:
         """
         # 1. Send prompt to AI service
         ai_response = await interpret_crawl_prompt(request.prompt, request.max_urls)
-        
+
         # 2. Extract URLs from AI response
         urls = extract_urls_from_ai_response(ai_response)
-        
+
         if not urls:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="AI could not identify any URLs from the prompt"
             )
-        
+
         # 3. Submit batch crawl job
         job_id = await job_manager.create_job(
             session_id=session_id,
@@ -449,16 +449,16 @@ async def create_wraith_job(
             callback_url=request.callback_url,
             bearer_token=bearer_token
         )
-        
+
         return CreateJobResponse(
             job_id=job_id,
             session_id=session_id,
             message=f"AI-driven crawl job submitted for prompt: '{request.prompt}'"
         )
         """
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error creating wraith job: {e}", exc_info=True)
+        logger.error(f"Error creating grub job: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

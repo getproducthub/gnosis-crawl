@@ -1,5 +1,5 @@
 """
-Authentication client for gnosis-crawl to integrate with gnosis-auth service.
+Authentication client for Grub Crawler to integrate with gnosis-auth service.
 """
 import os
 import logging

@@ -1,5 +1,5 @@
 """
-Core crawler orchestration for gnosis-crawl
+Core crawler orchestration for Grub Crawler
 Combines browser automation with markdown generation
 """
 import asyncio
@@ -56,7 +56,7 @@ class CrawlResult:
         self.body_char_count = 0
         self.body_word_count = 0
         self.content_quality = "empty"
-        self.extractor_version = f"gnosis-crawl/{__version__}"
+        self.extractor_version = f"grub-crawl/{__version__}"
         self.normalized_url = ""
         self.content_hash = ""
         self.policy_flags: List[str] = []
