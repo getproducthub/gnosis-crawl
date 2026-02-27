@@ -1,6 +1,6 @@
 """
-Gnosis-Crawl FastAPI Application
-Pure API crawling service with AHP agent architecture
+Grub Crawler — FastAPI Application
+Agentic web crawling service with mesh P2P
 """
 import os
 import re
@@ -149,8 +149,8 @@ async def verify_internal_token(request: Request):
 
 # Create FastAPI application
 app = FastAPI(
-    title="Gnosis-Crawl",
-    description="Agentic web crawling service with markdown generation",
+    title="Grub Crawler",
+    description="Agentic web crawling service with mesh P2P",
     version="1.0.0",
     docs_url=None,  # Disable default docs for AHP pattern
     redoc_url=None,
@@ -234,7 +234,7 @@ async def health_check():
         tool_registry = get_global_registry()
         result = {
             "status": "healthy",
-            "service": "gnosis-crawl",
+            "service": "grub-crawl",
             "version": "1.0.0",
             "cloud_mode": settings.is_cloud_environment(),
             "tools_registered": len(tool_registry.tools),
@@ -276,9 +276,9 @@ async def view_page(url: str = "", javascript: bool = True, timeout: int = 30):
         return HTMLResponse(
             content=(
                 "<!doctype html>"
-                "<html><head><title>Gnosis Crawl Viewer</title></head>"
+                "<html><head><title>Grub Crawler Viewer</title></head>"
                 "<body style=\"font-family: sans-serif; margin: 2rem;\">"
-                "<h2>Gnosis Crawl Viewer</h2>"
+                "<h2>Grub Crawler Viewer</h2>"
                 "<form method=\"get\" action=\"/view\" style=\"display:flex; gap:0.5rem;\">"
                 "<input name=\"url\" placeholder=\"https://news.ycombinator.com\" "
                 "style=\"flex:1; padding:0.5rem;\" />"
@@ -289,7 +289,7 @@ async def view_page(url: str = "", javascript: bool = True, timeout: int = 30):
                 "</select></label>"
                 "<button type=\"submit\">Open</button>"
                 "</form>"
-                "<p style=\"color:#666;\">This view fetches the page through gnosis-crawl "
+                "<p style=\"color:#666;\">This view fetches the page through Grub Crawler "
                 "and renders it with a base URL so links work.</p>"
                 "</body></html>"
             ),

@@ -1,7 +1,7 @@
 services:
-  gnosis-crawl:
+  grub-crawl:
     build: .
-    container_name: gnosis-crawl
+    container_name: grub-crawl
     ports:
       - "6792:6792"
     env_file:
@@ -32,7 +32,7 @@ services:
       # Mesh (uncomment to enable — see docker-compose.mesh.yml for 2-node setup)
       # - MESH_ENABLED=true
       # - MESH_NODE_NAME=local
-      # - MESH_ADVERTISE_URL=http://gnosis-crawl:6792
+      # - MESH_ADVERTISE_URL=http://grub-crawl:6792
       # - MESH_SECRET=changeme
       # - MESH_PEERS=
     volumes:

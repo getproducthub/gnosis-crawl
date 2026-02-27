@@ -1,4 +1,4 @@
-"""Shared fixtures and markers for gnosis-crawl test suite."""
+"""Shared fixtures and markers for grub-crawl test suite."""
 
 import pytest
 

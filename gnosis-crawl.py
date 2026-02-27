@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gnosis Crawl MCP Bridge
+Grub Crawler MCP Bridge
 =======================
 
 The world's only agentic web crawler — MCP interface.
@@ -9,8 +9,8 @@ Exposes both traditional crawl tools (Mode A) and an autonomous agent
 loop (Mode B) to any MCP-compatible host. Built using the brain of a
 human that knows about distributed crawling architectures.
 
-Defaults to LOCAL crawling (gnosis-crawl:8080) with NO AUTH required.
-Automatically fixes localhost/127.0.0.1 references to gnosis-crawl:8080.
+Defaults to LOCAL crawling (grub-crawl:8080) with NO AUTH required.
+Automatically fixes localhost/127.0.0.1 references to grub-crawl:8080.
 
 Tools:
   - crawl_url: fetch markdown from a single URL (supports JS injection)
@@ -20,7 +20,7 @@ Tools:
   - agent_run: submit a multi-step task to the autonomous agent (Mode B)
   - agent_status: check status of a running agent task
   - ghost_extract: Ghost Protocol — screenshot + vision AI extraction (anti-bot bypass)
-  - set_auth_token: save Wraith API token to .wraithenv (optional)
+  - set_auth_token: save Grub API token to .grubenv (optional)
   - crawl_status: report configuration (base URL, token presence)
   - crawl_validate: validate whether crawled text is usable
   - crawl_search: fuzzy search across cached crawl files
@@ -38,12 +38,12 @@ JavaScript Injection for Markdown Extraction:
   - Useful for expanding hidden content, interacting with JS, etc.
 
 Env/config:
-  - WRAITH_AUTH_TOKEN        (optional, preferred if present)
-  - GNOSIS_CRAWL_BASE_URL    (overrides default gnosis-crawl:8080)
-  - .wraithenv file in repo root with line: WRAITH_AUTH_TOKEN=...
+  - GRUB_AUTH_TOKEN        (optional, preferred if present)
+  - GRUB_CRAWL_BASE_URL    (overrides default grub-crawl:8080)
+  - .grubenv file in repo root with line: GRUB_AUTH_TOKEN=...
 
 Defaults:
-  - Local: "http://gnosis-crawl:8080" (default, always used unless overridden)
+  - Local: "http://grub-crawl:8080" (default, always used unless overridden)
   - Auth: None required
 """
 
@@ -60,25 +60,25 @@ import aiohttp
 from mcp.server.fastmcp import FastMCP, Context
 from urllib.parse import urlparse, unquote, quote
 
-mcp = FastMCP("gnosis-crawl")
+mcp = FastMCP("grub-crawl")
 
-# Auto-detect whether we're running inside Docker (gnosis-crawl hostname
-# resolves) or on the host (use localhost).  GNOSIS_CRAWL_BASE_URL env var
+# Auto-detect whether we're running inside Docker (grub-crawl hostname
+# resolves) or on the host (use localhost).  GRUB_CRAWL_BASE_URL env var
 # always wins if set.
-_DOCKER_SERVER_URL = "http://gnosis-crawl:6792"
+_DOCKER_SERVER_URL = "http://grub-crawl:6792"
 _HOST_SERVER_URL = "http://localhost:6792"
-WRAITH_ENV_FILE = os.path.join(os.getcwd(), ".wraithenv")
+GRUB_ENV_FILE = os.path.join(os.getcwd(), ".grubenv")
 
 
 def _detect_local_server() -> str:
     """Return the right default URL based on where we're running."""
-    override = os.environ.get("GNOSIS_CRAWL_BASE_URL", "").strip()
+    override = os.environ.get("GRUB_CRAWL_BASE_URL", "").strip()
     if override:
         return override
-    # Quick DNS check: does 'gnosis-crawl' resolve? (inside Docker it will)
+    # Quick DNS check: does 'grub-crawl' resolve? (inside Docker it will)
     import socket
     try:
-        socket.getaddrinfo("gnosis-crawl", 6792, proto=socket.IPPROTO_TCP)
+        socket.getaddrinfo("grub-crawl", 6792, proto=socket.IPPROTO_TCP)
         return _DOCKER_SERVER_URL
     except socket.gaierror:
         return _HOST_SERVER_URL
@@ -132,27 +132,27 @@ def _is_google_host(url: str) -> bool:
 
 def _get_auth_token() -> Optional[str]:
     """
-    Retrieve Wraith API authentication token from environment or .wraithenv file.
+    Retrieve Grub API authentication token from environment or .grubenv file.
     
-    Checks WRAITH_AUTH_TOKEN environment variable first, then falls back to
-    reading from .wraithenv file in the current working directory.
+    Checks GRUB_AUTH_TOKEN environment variable first, then falls back to
+    reading from .grubenv file in the current working directory.
     
-    Returns None by default (no auth required for local gnosis-crawl:8080).
+    Returns None by default (no auth required for local grub-crawl:8080).
     
     Returns:
         Optional[str]: Authentication token if found, None otherwise
     """
     # Env wins
-    tok = os.environ.get("WRAITH_AUTH_TOKEN")
+    tok = os.environ.get("GRUB_AUTH_TOKEN")
     if tok:
         return tok.strip()
-    # Fallback to .wraithenv
+    # Fallback to .grubenv
     try:
-        if os.path.exists(WRAITH_ENV_FILE):
-            with open(WRAITH_ENV_FILE, "r", encoding="utf-8") as f:
+        if os.path.exists(GRUB_ENV_FILE):
+            with open(GRUB_ENV_FILE, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
-                    if line.startswith("WRAITH_AUTH_TOKEN="):
+                    if line.startswith("GRUB_AUTH_TOKEN="):
                         return line.split("=", 1)[1].strip()
     except Exception:
         pass
@@ -448,7 +448,7 @@ def _resolve_base_url(server_url: Optional[str] = None) -> str:
     """
     Determine which crawler server URL to use.
 
-    Priority: explicit server_url arg > GNOSIS_CRAWL_BASE_URL env > auto-detect
+    Priority: explicit server_url arg > GRUB_CRAWL_BASE_URL env > auto-detect
     (Docker vs host).  Never rewrites explicit localhost URLs so callers outside
     Docker can reach the crawler directly.
     """
@@ -461,15 +461,15 @@ def _resolve_base_url(server_url: Optional[str] = None) -> str:
 @mcp.tool()
 async def set_auth_token(token: str, ctx: Context = None) -> Dict[str, Any]:
     """
-    Save Wraith API authentication token to .wraithenv file (optional).
+    Save Grub API authentication token to .grubenv file (optional).
     
     Stores the token persistently so it doesn't need to be passed with each request.
-    The token is saved in .wraithenv in the current working directory.
+    The token is saved in .grubenv in the current working directory.
     
-    Note: auth is not required for local gnosis-crawl:8080.
+    Note: auth is not required for local grub-crawl:8080.
     
     Args:
-        token: Wraith API authentication token to save
+        token: Grub API authentication token to save
         ctx: MCP context (optional)
     
     Returns:
@@ -479,9 +479,9 @@ async def set_auth_token(token: str, ctx: Context = None) -> Dict[str, Any]:
     if not token:
         return {"success": False, "error": "No token provided"}
     try:
-        with open(WRAITH_ENV_FILE, "w", encoding="utf-8") as f:
-            f.write(f"WRAITH_AUTH_TOKEN={token}\n")
-        return {"success": True, "message": "Saved token to .wraithenv", "file": WRAITH_ENV_FILE}
+        with open(GRUB_ENV_FILE, "w", encoding="utf-8") as f:
+            f.write(f"GRUB_AUTH_TOKEN={token}\n")
+        return {"success": True, "message": "Saved token to .grubenv", "file": GRUB_ENV_FILE}
     except Exception as e:
         return {"success": False, "error": f"Failed to save token: {e}"}
 
@@ -489,13 +489,13 @@ async def set_auth_token(token: str, ctx: Context = None) -> Dict[str, Any]:
 @mcp.tool()
 async def crawl_status(server_url: Optional[str] = None) -> Dict[str, Any]:
     """
-    Check Wraith crawler configuration and connection status.
+    Check Grub crawler configuration and connection status.
     
-    Reports the server URL being used (defaults to gnosis-crawl:8080) and 
+    Reports the server URL being used (defaults to grub-crawl:8080) and 
     whether an auth token is configured. Auth is optional for local server.
     
     Args:
-        server_url: Optional explicit server URL to check (defaults to gnosis-crawl:8080)
+        server_url: Optional explicit server URL to check (defaults to grub-crawl:8080)
     
     Returns:
         Dict[str, Any]: Server URL being used and token availability status
@@ -506,7 +506,7 @@ async def crawl_status(server_url: Optional[str] = None) -> Dict[str, Any]:
         "success": True,
         "base_url": base,
         "token_present": _get_auth_token() is not None,
-        "auth_required": False,  # Auth not required for local gnosis-crawl:8080
+        "auth_required": False,  # Auth not required for local grub-crawl:8080
     }
 
 
@@ -526,14 +526,14 @@ async def crawl_url(
     """
     Crawl a single URL and extract clean markdown content.
     
-    Fetches a web page through the Wraith API on gnosis-crawl:8080 (local default),
+    Fetches a web page through the Grub API on grub-crawl:8080 (local default),
     which handles JavaScript rendering, content extraction, and markdown conversion.
     Returns structured markdown optimized for AI consumption.
     
     JavaScript injection: If javascript_payload is provided, it will be executed
     FIRST on the page, then markdown extraction will run on the modified content.
     
-    Defaults to LOCAL gnosis-crawl:8080 with NO AUTH required.
+    Defaults to LOCAL grub-crawl:8080 with NO AUTH required.
     
     Args:
         url: Target URL to crawl
@@ -543,7 +543,7 @@ async def crawl_url(
                           markdown extraction. Runs first, then markdown processes
                           the modified page content.
         markdown_extraction: Extraction mode ("enhanced" applies content pruning)
-        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        server_url: Optional explicit server URL (defaults to grub-crawl:8080)
         timeout: Request timeout in seconds (minimum 5)
         title: Optional title for the crawl report (defaults to domain name)
         ctx: MCP context (optional)
@@ -640,14 +640,14 @@ async def crawl_batch(
     """
     Crawl multiple URLs in a single batch operation.
     
-    Processes multiple URLs through Wraith on gnosis-crawl:8080 (local default),
+    Processes multiple URLs through Grub on grub-crawl:8080 (local default),
     with options for asynchronous processing and automatic collation into a 
     single markdown document. Max 50 URLs per batch.
     
     JavaScript injection: If javascript_payload is provided, it will be executed
     FIRST on each page, then markdown extraction will run on the modified content.
     
-    Defaults to LOCAL gnosis-crawl:8080 with NO AUTH required.
+    Defaults to LOCAL grub-crawl:8080 with NO AUTH required.
     
     Args:
         urls: List of URLs to crawl (max 50)
@@ -659,7 +659,7 @@ async def crawl_batch(
         async_mode: If True, process URLs asynchronously (faster)
         collate: If True, combine all results into a single markdown document
         collate_title: Title for collated document (auto-generated if not provided)
-        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        server_url: Optional explicit server URL (defaults to grub-crawl:8080)
         timeout: Request timeout in seconds (minimum 10)
         ctx: MCP context (optional)
     
@@ -780,17 +780,17 @@ async def raw_html(
     """
     Fetch raw HTML from a URL without markdown conversion.
     
-    Returns the raw HTML source from a web page via gnosis-crawl:8080 (local default),
+    Returns the raw HTML source from a web page via grub-crawl:8080 (local default),
     optionally with JavaScript execution. Useful when you need the actual HTML 
     structure rather than cleaned markdown content.
     
-    Defaults to LOCAL gnosis-crawl:8080 with NO AUTH required.
+    Defaults to LOCAL grub-crawl:8080 with NO AUTH required.
     
     Args:
         url: Target URL to fetch
         javascript_enabled: If True, execute JavaScript before capturing HTML
         javascript_payload: Optional JavaScript code to execute on the page
-        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        server_url: Optional explicit server URL (defaults to grub-crawl:8080)
         timeout: Request timeout in seconds (minimum 5)
         ctx: MCP context (optional)
     
@@ -849,7 +849,7 @@ async def download_file(
     ctx: Context = None,
 ) -> Dict[str, Any]:
     """
-    Download a file (e.g., PDF) through gnosis-crawl and save it locally.
+    Download a file (e.g., PDF) through grub-crawl and save it locally.
 
     Args:
         url: File URL to download
@@ -857,7 +857,7 @@ async def download_file(
         use_browser: If True, use Playwright in the service to fetch the file
         javascript_enabled: Enable JS in browser mode
         timeout: Request timeout in seconds
-        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        server_url: Optional explicit server URL (defaults to grub-crawl:8080)
         filename: Optional filename hint for the service
         save_in_service: If True, store file in service storage
         session_id: Required when save_in_service=True
@@ -1369,7 +1369,7 @@ async def agent_run(
                         (e.g. ["example.com", "docs.example.com"])
         max_steps: Maximum agent loop iterations (default: 12, max: 50)
         timeout: Wall-clock timeout in seconds (default: 90, max: 300)
-        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        server_url: Optional explicit server URL (defaults to grub-crawl:8080)
         ctx: MCP context (optional)
 
     Returns:
@@ -1430,7 +1430,7 @@ async def agent_status(
 
     Args:
         run_id: The run_id returned by agent_run
-        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        server_url: Optional explicit server URL (defaults to grub-crawl:8080)
         timeout: HTTP timeout seconds
         ctx: MCP context (optional)
 
@@ -1483,7 +1483,7 @@ async def ghost_extract(
 
     Args:
         url: The URL to ghost-extract
-        server_url: Optional explicit server URL (defaults to gnosis-crawl:8080)
+        server_url: Optional explicit server URL (defaults to grub-crawl:8080)
         timeout: HTTP timeout seconds (default 60 — ghost is slower than normal crawl)
         prompt: Optional custom vision extraction prompt
         ctx: MCP context (optional)

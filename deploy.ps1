@@ -1,11 +1,11 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-Deployment script for gnosis-crawl service
+Deployment script for grub-crawl service
 Based on gnosis-ocr deploy.ps1 pattern
 
 .DESCRIPTION
-Deploys gnosis-crawl to local Docker, Cloud Run, or a 2-node mesh.
+Deploys grub-crawl to local Docker, Cloud Run, or a 2-node mesh.
 Supports local development, cloud production, and mesh topologies.
 
 .PARAMETER Target
@@ -54,7 +54,7 @@ param(
 )
 
 # Configuration — matches grub-site / gnosis-ocr pattern
-$ServiceName = "gnosis-crawl"
+$ServiceName = "grub-crawl"
 $ProjectId = $env:GOOGLE_CLOUD_PROJECT
 if (-not $ProjectId) { $ProjectId = "gnosis-459403" }
 $Region = "us-central1"
@@ -203,7 +203,7 @@ switch ($Target) {
         # Build env vars
         $EnvVars = @(
             "RUNNING_IN_CLOUD=true",
-            "GCS_BUCKET_NAME=gnosis-crawl-storage-prod",
+            "GCS_BUCKET_NAME=grub-crawl-storage-prod",
             "GNOSIS_AUTH_URL=https://gnosis-auth-$($ProjectId.Replace('_', '-')).a.run.app",
             "GOOGLE_CLOUD_PROJECT=$ProjectId"
         )

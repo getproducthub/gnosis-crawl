@@ -1,6 +1,6 @@
 """Mesh coordinator — agents talking to agents.
 
-Every gnosis-crawl instance is a peer. Enable with MESH_ENABLED=true.
+Every Grub Crawler instance is a peer. Enable with MESH_ENABLED=true.
 """
 
 from app.mesh.coordinator import MeshCoordinator

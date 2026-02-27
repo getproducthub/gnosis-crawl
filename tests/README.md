@@ -1,6 +1,6 @@
-# Gnosis-Crawl Tests
+# Grub Crawler Tests
 
-Comprehensive test suite for gnosis-crawl API.
+Comprehensive test suite for grub-crawl API.
 
 ## Test Organization
 
@@ -32,13 +32,13 @@ pytest -v tests/test_auth_local.py
 
 ### Remote Integration Tests
 
-Tests that require a deployed gnosis-crawl service:
+Tests that require a deployed grub-crawl service:
 
 ```bash
 # Set environment variables first
-export GNOSIS_CRAWL_API_URL="https://your-deployed-url.com"
-export GNOSIS_CRAWL_CUSTOMER_ID="test-customer-123"
-export GNOSIS_CRAWL_BEARER_TOKEN="your-token-here"  # Optional
+export GRUB_CRAWL_API_URL="https://your-deployed-url.com"
+export GRUB_CRAWL_CUSTOMER_ID="test-customer-123"
+export GRUB_CRAWL_BEARER_TOKEN="your-token-here"  # Optional
 
 # Run remote tests
 pytest -v -m remote
@@ -105,13 +105,13 @@ export SECRET_KEY="your-secret-key"
 
 ```bash
 # Required: Deployed service URL
-export GNOSIS_CRAWL_API_URL="https://your-service.com"
+export GRUB_CRAWL_API_URL="https://your-service.com"
 
 # Optional: Customer ID for testing
-export GNOSIS_CRAWL_CUSTOMER_ID="test-customer"
+export GRUB_CRAWL_CUSTOMER_ID="test-customer"
 
 # Optional: Bearer token for authenticated tests
-export GNOSIS_CRAWL_BEARER_TOKEN="your-jwt-token"
+export GRUB_CRAWL_BEARER_TOKEN="your-jwt-token"
 ```
 
 ## Test Configuration
@@ -206,8 +206,8 @@ def test_optional_feature(self):
 ```yaml
 - name: Run Tests
   env:
-    GNOSIS_CRAWL_API_URL: ${{ secrets.API_URL }}
-    GNOSIS_CRAWL_BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
+    GRUB_CRAWL_API_URL: ${{ secrets.API_URL }}
+    GRUB_CRAWL_BEARER_TOKEN: ${{ secrets.BEARER_TOKEN }}
   run: |
     pytest -v -m "not slow"
 ```
@@ -225,23 +225,23 @@ pytest -v -m "not remote"
 
 Check environment variables:
 ```bash
-echo $GNOSIS_CRAWL_API_URL
-echo $GNOSIS_CRAWL_CUSTOMER_ID
+echo $GRUB_CRAWL_API_URL
+echo $GRUB_CRAWL_CUSTOMER_ID
 ```
 
 ### Auth Tests Fail
 
 Verify token is valid:
 ```bash
-curl -H "Authorization: Bearer $GNOSIS_CRAWL_BEARER_TOKEN" \
-     $GNOSIS_CRAWL_API_URL/health
+curl -H "Authorization: Bearer $GRUB_CRAWL_BEARER_TOKEN" \
+     $GRUB_CRAWL_API_URL/health
 ```
 
 ### Import Errors
 
 Ensure you're in the project root:
 ```bash
-cd /path/to/gnosis-crawl
+cd /path/to/grub-crawl
 pytest -v
 ```
 

@@ -1,6 +1,7 @@
 """
 Authentication integration with gnosis-auth service
 Based on gnosis-ahp auth client pattern with HMAC token validation
+(gnosis-auth is an external service and retains its name)
 """
 import os
 import hmac
@@ -138,7 +139,7 @@ class AuthClient:
                     raise HTTPException(status_code=401, detail="Token has expired")
             
             # Extract user info
-            subject = payload.get('sub', 'unknown@gnosis-crawl.local')
+            subject = payload.get('sub', 'unknown@grub-crawl.local')
             actor = payload.get('actor', '')
             
             logger.info(f"Token validated for subject: {subject}")
@@ -160,9 +161,9 @@ class AuthClient:
     def _create_mock_user(self, token: str) -> Dict:
         """Create mock user for development"""
         return {
-            "subject": "user:dev@gnosis-crawl.local",
+            "subject": "user:dev@grub-crawl.local",
             "scopes": ["crawl:*"],
-            "email": "dev@gnosis-crawl.local",
+            "email": "dev@grub-crawl.local",
             "mock": True
         }
 
@@ -225,7 +226,7 @@ async def get_user_email(user: Dict = Depends(get_current_user)) -> str:
     elif user.get("subject", "").startswith("user:"):
         return user["subject"][5:]  # Remove "user:" prefix
     else:
-        return "unknown@gnosis-crawl.local"
+        return "unknown@grub-crawl.local"
 
 
 def get_customer_identifier(customer_id: Optional[str] = None, user_email: Optional[str] = None) -> str:
@@ -245,4 +246,4 @@ def get_customer_identifier(customer_id: Optional[str] = None, user_email: Optio
     elif user_email:
         return user_email
     else:
-        return "anonymous@gnosis-crawl.local"
+        return "anonymous@grub-crawl.local"

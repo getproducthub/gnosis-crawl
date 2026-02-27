@@ -1,5 +1,5 @@
 """
-FastAPI Middleware for gnosis-crawl - Authentication and Content-Type enforcement.
+FastAPI Middleware for Grub Crawler - Authentication and Content-Type enforcement.
 """
 import os
 import logging

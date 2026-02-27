@@ -1,5 +1,5 @@
 """
-Configuration management for gnosis-crawl
+Configuration management for Grub Crawler
 Environment-based configuration following gnosis-ocr pattern
 """
 import os

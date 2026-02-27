@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# deploy.sh — gnosis-crawl deployment (local / mesh / cloudrun)
+# deploy.sh — grub-crawl deployment (local / mesh / cloudrun)
 #
 # Usage:
 #   ./deploy.sh local                    # single node
@@ -28,7 +28,7 @@ done
 
 PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-gnosis-459403}"
 REGION="us-central1"
-SERVICE_NAME="gnosis-crawl"
+SERVICE_NAME="grub-crawl"
 IMAGE="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
 REBUILD="${REBUILD:-}"
 
@@ -83,7 +83,7 @@ case "$TARGET" in
 
     # Base env vars
     ENV_VARS="RUNNING_IN_CLOUD=true"
-    ENV_VARS="${ENV_VARS},GCS_BUCKET_NAME=gnosis-crawl-storage-prod"
+    ENV_VARS="${ENV_VARS},GCS_BUCKET_NAME=grub-crawl-storage-prod"
     ENV_VARS="${ENV_VARS},GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
 
     # Mesh env vars

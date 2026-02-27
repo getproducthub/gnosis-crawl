@@ -1,4 +1,4 @@
-"""Agent API routes for gnosis-crawl Mode B.
+"""Agent API routes for Grub Crawler Mode B.
 
 POST /api/agent/run      — submit a task to the internal agent loop
 GET  /api/agent/status/{run_id} — check status of a run (via persisted trace)

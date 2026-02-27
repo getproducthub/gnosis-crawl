@@ -1,5 +1,5 @@
-# Gnosis-Crawl Dockerfile
-# Use official Playwright Python image like gnosis-wraith
+# Grub Crawler Dockerfile
+# Use official Playwright Python image like grub
 
 FROM mcr.microsoft.com/playwright/python:v1.54.0-jammy
 

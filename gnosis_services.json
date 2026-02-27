@@ -4,7 +4,7 @@
       "url": "http://localhost:6793",
       "description": "Authentication and HTTP Proxy service"
     },
-    "gnosis-crawl": {
+    "grub-crawl": {
       "url": "http://localhost:6792", 
       "description": "Web crawling and markdown generation service"
     },
@@ -18,8 +18,8 @@
       "url": "${GNOSIS_AHP_URL}",
       "description": "Authentication and HTTP Proxy service"
     },
-    "gnosis-crawl": {
-      "url": "${GNOSIS_CRAWL_URL}",
+    "grub-crawl": {
+      "url": "${GRUB_CRAWL_URL}",
       "description": "Web crawling and markdown generation service" 
     },
     "gnosis-ocr": {
@@ -32,7 +32,7 @@
       "url": "http://localhost:6793",
       "description": "Authentication and HTTP Proxy service for testing"
     },
-    "gnosis-crawl": {
+    "grub-crawl": {
       "url": "http://localhost:6792",
       "description": "Web crawling service for testing"
     }
