@@ -395,9 +395,14 @@ async def site_error_report(request: Request):
     )
     return {"ok": True}
 
-# Embedded landing page (grub-site) — served at /site
+# Embedded landing page (grub-site) — served at / and /site
 if _SITE_INDEX and _SITE_INDEX.is_file():
     _site_html = _SITE_INDEX.read_text(encoding="utf-8")
+
+    @app.get("/", response_class=HTMLResponse)
+    async def serve_root():
+        """Serve the landing page at root."""
+        return HTMLResponse(content=_site_html, status_code=200)
 
     @app.get("/site", response_class=HTMLResponse)
     async def serve_site():
