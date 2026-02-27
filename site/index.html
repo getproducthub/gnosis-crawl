@@ -581,9 +581,9 @@ function WhyGrub() {
   const keys = ["crawl4ai", "firecrawl", "apify", "scrapy", "browserbase", "scrapfly", "grub"];
 
   function cell(val, isGrub) {
-    if (val === true) return <span style={{ color: isGrub ? "#c8ff00" : "rgba(255,255,255,0.5)" }}>{isGrub ? "\u2714" : "\u2714"}</span>;
-    if (val === false) return <span style={{ color: "rgba(255,255,255,0.15)" }}>\u2014</span>;
-    return <span style={{ color: "rgba(255,154,0,0.7)" }}>\u223C</span>;
+    if (val === true) return <span style={{ color: isGrub ? "#c8ff00" : "rgba(255,255,255,0.5)" }}>{"\u2714"}</span>;
+    if (val === false) return <span style={{ color: "rgba(255,255,255,0.15)" }}>{"\u2014"}</span>;
+    return <span style={{ color: "rgba(255,154,0,0.7)" }}>{"\u223C"}</span>;
   }
 
   return (
