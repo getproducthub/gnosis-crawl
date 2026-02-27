@@ -105,7 +105,7 @@ case "$TARGET" in
         --platform managed \
         --region "${REGION}" \
         --allow-unauthenticated \
-        --port 8080 \
+        --port 6792 \
         --memory 1Gi \
         --cpu 1 \
         --max-instances 10 \
