@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 class TestConfigBrowserEngine:
     """Config correctly exposes browser_engine setting."""
 
-    def test_default_is_chromium(self):
+    def test_default_is_camoufox(self):
         from app.config import Settings
         s = Settings(_env_file=None)
-        assert s.browser_engine == "chromium"
+        assert s.browser_engine == "camoufox"
 
     def test_camoufox_from_env(self):
         from app.config import Settings

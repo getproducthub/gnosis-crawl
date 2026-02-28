@@ -185,6 +185,8 @@ class GhostCapture:
     url: str = ""
     capture_ms: int = 0
     error: Optional[str] = None
+    html: str = ""           # raw HTML from crawl
+    dom_markdown: str = ""   # markdown generated from DOM
 
 
 async def capture_screenshot(
@@ -227,6 +229,16 @@ async def capture_screenshot(
             proxy=proxy,
         )
 
+        # Generate markdown from DOM (primary extraction method)
+        dom_markdown = ""
+        try:
+            from app.markdown import MarkdownGenerator
+            md_gen = MarkdownGenerator()
+            md_result = md_gen.generate_markdown(html, url)
+            dom_markdown = md_result.clean_markdown or md_result.raw_markdown or ""
+        except Exception as md_err:
+            logger.debug("DOM markdown generation failed: %s", md_err)
+
         capture_ms = int((time.monotonic() - start) * 1000)
 
         if screenshot_data is None:
@@ -249,6 +261,8 @@ async def capture_screenshot(
             image_bytes=image_bytes,
             url=url,
             capture_ms=capture_ms,
+            html=html,
+            dom_markdown=dom_markdown,
         )
 
     except Exception as exc:
@@ -266,19 +280,25 @@ async def capture_screenshot(
 # Vision extraction
 # ---------------------------------------------------------------------------
 
-GHOST_EXTRACTION_PROMPT = """You are extracting readable text content from a screenshot of a web page.
+GHOST_EXTRACTION_PROMPT = """You are evaluating and extracting content from a screenshot of a web page.
 
-The page may show an anti-bot challenge, CAPTCHA, or the actual content behind it.
+STEP 1 — CLASSIFY THE PAGE:
+Look at the screenshot and determine what type of page this is. Output ONE of these on the FIRST line:
 
-Instructions:
-1. If you can see actual page content (articles, text, data), extract ALL of it faithfully.
-2. If you see an anti-bot challenge or CAPTCHA page, describe what you see and note that the content is blocked.
-3. Preserve the structure: use headings, lists, and paragraphs as they appear visually.
-4. Do NOT add commentary or analysis — just extract what you see on the page.
-5. If there are tables, reproduce them in markdown table format.
-6. If there are images with alt text or captions, note them in brackets like [Image: description].
+PAGE_TYPE: BLOCKED — if you see any anti-bot challenge, Cloudflare "Just a moment" / "Checking your browser" screen, CAPTCHA, "Access Denied", "Verify you are human", security check, rate limit page, or any other WAF/bot-detection page.
+PAGE_TYPE: CONTENT — if you see actual page content (articles, reviews, product info, data).
+PAGE_TYPE: ERROR — if you see a 404, 500, or other error page.
+PAGE_TYPE: EMPTY — if the page is blank or has only navigation/headers with no substantive content.
 
-Extract the content now:"""
+STEP 2 — EXTRACT CONTENT:
+If PAGE_TYPE is CONTENT:
+- Extract ALL visible text faithfully. Preserve structure with headings, lists, paragraphs.
+- Reproduce tables in markdown format. Note images as [Image: description].
+- Do NOT add commentary — just extract what you see.
+
+If PAGE_TYPE is BLOCKED, ERROR, or EMPTY:
+- Briefly describe what you see on the page (1-2 sentences).
+- Do NOT fabricate content that isn't visible."""
 
 
 @dataclass
@@ -332,13 +352,29 @@ async def extract_via_vision(
 
         extraction_ms = int((time.monotonic() - start) * 1000)
 
-        # Check if the extracted content indicates the page itself is blocked
-        blocked_indicators = [
-            "anti-bot", "captcha", "challenge", "verify you are human",
-            "access denied", "please complete the security check",
-        ]
+        # Check if the model classified the page as blocked via PAGE_TYPE prefix
         content_lower = extracted_text.lower()
-        blocked_content = any(ind in content_lower for ind in blocked_indicators)
+        first_line = extracted_text.strip().split('\n')[0].strip().lower()
+
+        # Structured classification (from updated prompt)
+        blocked_by_classification = any(tag in first_line for tag in [
+            "page_type: blocked", "page_type:blocked",
+            "page_type: error", "page_type:error",
+            "page_type: empty", "page_type:empty",
+        ])
+
+        # Fallback pattern matching (if model doesn't follow the format exactly)
+        blocked_indicators = [
+            "anti-bot", "captcha", "recaptcha", "hcaptcha",
+            "challenge", "verify you are human", "are you human",
+            "access denied", "please complete the security check",
+            "just a moment", "checking your browser",
+            "cloudflare", "ray id", "security check",
+            "attention required", "enable javascript",
+        ]
+        blocked_by_patterns = any(ind in content_lower for ind in blocked_indicators)
+
+        blocked_content = blocked_by_classification or blocked_by_patterns
 
         return GhostExtraction(
             success=True,
@@ -396,6 +432,7 @@ async def run_ghost_protocol(
     prompt: str = GHOST_EXTRACTION_PROMPT,
     block_detection: Optional[BlockDetection] = None,
     proxy=None,
+    existing_markdown: Optional[str] = None,
 ) -> GhostResult:
     """Execute the full Ghost Protocol pipeline.
 
@@ -418,6 +455,23 @@ async def run_ghost_protocol(
 
     logger.info("Ghost Protocol activated for %s", url)
 
+    # Reuse existing markdown if sufficient — avoid re-navigating the same URL
+    if existing_markdown and len(existing_markdown.strip()) > 100:
+        block_check = detect_block(markdown=existing_markdown)
+        if not block_check.blocked:
+            total_ms = int((time.monotonic() - pipeline_start) * 1000)
+            logger.info(
+                "Ghost Protocol: reusing existing markdown (%d chars), skipping re-navigation",
+                len(existing_markdown),
+            )
+            return GhostResult(
+                success=True,
+                url=url,
+                content=existing_markdown,
+                total_ms=total_ms,
+                render_mode="reused",
+            )
+
     # Step 1: Capture screenshot
     capture = await capture_screenshot(
         url,
@@ -437,6 +491,25 @@ async def run_ghost_protocol(
             block_reason=block_detection.reason if block_detection else "",
             error=f"Screenshot capture failed: {capture.error}",
         )
+
+    # Step 1.5: Try DOM markdown first (preferred over vision)
+    if capture.dom_markdown and len(capture.dom_markdown.strip()) > 200:
+        block_check = detect_block(markdown=capture.dom_markdown)
+        if not block_check.blocked:
+            total_ms = int((time.monotonic() - pipeline_start) * 1000)
+            logger.info(
+                "Ghost Protocol: DOM markdown sufficient (%d chars), skipping vision extraction",
+                len(capture.dom_markdown),
+            )
+            return GhostResult(
+                success=True,
+                url=url,
+                content=capture.dom_markdown,
+                render_mode="ghost_dom",
+                capture_ms=capture.capture_ms,
+                total_ms=total_ms,
+                provider="dom_markdown",
+            )
 
     # Step 2: Vision extraction
     extraction = await extract_via_vision(

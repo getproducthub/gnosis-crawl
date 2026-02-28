@@ -7,13 +7,70 @@ import random
 import asyncio
 import logging
 from typing import Optional, Dict, Any
+try:
+    from patchright.async_api import async_playwright as async_patchright
+    _HAS_PATCHRIGHT = True
+except ImportError:
+    _HAS_PATCHRIGHT = False
+try:
+    from browserforge.headers import HeaderGenerator
+    _HAS_BROWSERFORGE = True
+except ImportError:
+    _HAS_BROWSERFORGE = False
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 
 from app.config import settings
+from app.stealth import apply_chromium_js_patches
 
 logger = logging.getLogger(__name__)
+
+# Comprehensive Chromium launch args for stealth and stability.
+# Shared by BrowserEngine and BrowserPool.
+CHROMIUM_STEALTH_ARGS = [
+    # GPU / sandbox / stability
+    '--disable-gpu',
+    '--no-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-accelerated-2d-canvas',
+    '--disable-accelerated-video-decode',
+    '--disable-features=site-per-process',
+    '--disable-extensions',
+    '--disable-background-networking',
+    '--disable-default-apps',
+    '--disable-sync',
+    '--disable-translate',
+    '--hide-scrollbars',
+    '--metrics-recording-only',
+    '--mute-audio',
+    '--no-first-run',
+    # Automation detection
+    '--disable-blink-features=AutomationControlled',
+    '--disable-features=VizDisplayCompositor',
+    # WebRTC leak protection
+    '--webrtc-ip-handling-policy=disable_non_proxied_udp',
+    '--force-webrtc-ip-handling-policy',
+    # Canvas fingerprint noise
+    '--fingerprinting-canvas-image-data-noise',
+    # Background / throttling
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
+    # Crash / hang reporting (detection signals)
+    '--disable-breakpad',
+    '--disable-hang-monitor',
+    '--disable-domain-reliability',
+    '--disable-ipc-flooding-protection',
+    '--disable-component-extensions-with-background-pages',
+    # Consistent rendering
+    '--force-color-profile=srgb',
+    '--font-render-hinting=none',
+    # Network service
+    '--enable-features=NetworkService,NetworkServiceInProcess',
+    # Pointer / hover consistency (looks like real desktop)
+    '--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4',
+]
 
 
 _VISIBLE_TEXT_JS = r"""
@@ -195,6 +252,14 @@ class BrowserEngine:
         self.page: Optional[Page] = None
         self._browser_lock = asyncio.Lock()
         self._camoufox_cm = None
+        self._context_semaphore = asyncio.Semaphore(settings.max_concurrent_crawls)
+        # Serialize context creation for Camoufox + residential proxy:
+        # concurrent proxy auth handshakes cause HTTP 407 rejections.
+        self._context_create_lock = asyncio.Lock()
+        # Per-domain locks: only one crawl per domain at a time.
+        # Hitting the same domain from multiple proxy IPs simultaneously
+        # is an anti-bot red flag and triggers Cloudflare rate limiting.
+        self._domain_locks: Dict[str, asyncio.Lock] = {}
         
     async def start_browser(self, javascript_enabled: bool = True) -> None:
         """Start browser with enhanced configuration and anti-detection."""
@@ -211,8 +276,14 @@ class BrowserEngine:
                 if settings.browser_engine == "camoufox":
                     logger.info("Starting Camoufox browser engine")
                     from camoufox.async_api import AsyncCamoufox
+                    import uuid as _uuid
 
-                    proxy = settings.get_proxy_config()
+                    session_id = _uuid.uuid4().hex[:12]
+                    proxy = settings.get_sticky_proxy_config(session_id=session_id, duration_minutes=30)
+                    if proxy:
+                        logger.info(f"Camoufox proxy session: {session_id} (30 min sticky)")
+                    else:
+                        logger.info("No proxy configured for Camoufox")
                     headless_mode = "virtual" if settings.browser_headless else False
 
                     self._camoufox_cm = AsyncCamoufox(
@@ -227,29 +298,15 @@ class BrowserEngine:
 
                     logger.info("Camoufox browser started successfully")
                 else:
-                    logger.info("Starting Playwright and browser")
-                    self.playwright = await async_playwright().start()
+                    if _HAS_PATCHRIGHT:
+                        logger.info("Starting Patchright (CDP-patched) browser")
+                        self.playwright = await async_patchright().start()
+                    else:
+                        logger.info("Starting Playwright browser (patchright not available)")
+                        self.playwright = await async_playwright().start()
 
-                    # Enhanced browser arguments for stability and stealth
-                    browser_args = [
-                        '--disable-gpu',
-                        '--no-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--disable-accelerated-2d-canvas',
-                        '--disable-accelerated-video-decode',
-                        '--disable-features=site-per-process',
-                        '--disable-extensions',
-                        '--disable-background-networking',
-                        '--disable-default-apps',
-                        '--disable-sync',
-                        '--disable-translate',
-                        '--hide-scrollbars',
-                        '--metrics-recording-only',
-                        '--mute-audio',
-                        '--no-first-run',
-                        '--disable-web-security',
-                        '--disable-features=VizDisplayCompositor'
-                    ]
+                    # Use shared stealth args constant
+                    browser_args = list(CHROMIUM_STEALTH_ARGS)
 
                     # Add headless configuration
                     headless_mode = settings.browser_headless
@@ -286,6 +343,7 @@ class BrowserEngine:
 
                     # Create page with enhanced headers
                     self.page = await self.context.new_page()
+                    await apply_chromium_js_patches(self.page)
                     await self._set_realistic_headers()
 
                     logger.info("Browser started successfully")
@@ -295,23 +353,30 @@ class BrowserEngine:
                 await self.close()
                 raise
     
-    async def create_isolated_context(self, javascript_enabled: bool = True, proxy=None) -> tuple[BrowserContext, Page]:
+    async def create_isolated_context(self, javascript_enabled: bool = True, proxy=None, domain: str = None, proxy_server: str = None) -> tuple[BrowserContext, Page]:
         """Create a new isolated browser context and page for concurrent operations."""
         if not self.browser:
             logger.info("Browser not started, initializing")
             await self.start_browser(javascript_enabled=javascript_enabled)
 
-        from app.stealth import apply_stealth, setup_request_interception
+        from app.stealth import apply_stealth, setup_request_interception, apply_chromium_js_patches
 
         if settings.browser_engine == "camoufox":
-            # Camoufox auto-generates realistic fingerprints per context
-            context_options = {}
-            if proxy is not None:
-                context_options['proxy'] = proxy
-            context = await self.browser.new_context(**context_options)
+            # Camoufox auto-generates realistic fingerprints per context.
+            # Do NOT set proxy per-context — the browser-level proxy already
+            # routes all traffic.  Setting it again causes 407 auth races when
+            # multiple contexts start simultaneously.
+            context = await self.browser.new_context()
             page = await context.new_page()
-            # Only add request interception — stealth is built-in at C++ level
+            # Stealth + request interception are built-in at C++ level
             await setup_request_interception(context)
+
+            if domain:
+                from app.cookie_store import get_cookie_store
+                loaded = await get_cookie_store().load_into_context(context, domain, proxy_server)
+                if loaded:
+                    logger.info(f"[review-crawl] Loaded {loaded} cookies from store for {domain}")
+
             return context, page
 
         # Chromium path: manual fingerprinting + playwright-stealth
@@ -336,11 +401,29 @@ class BrowserEngine:
         context = await self.browser.new_context(**context_options)
         page = await context.new_page()
 
-        # Apply stealth patches and request interception
+        # Apply stealth patches, JS patches, and request interception
         await apply_stealth(context)
+        await apply_chromium_js_patches(page)
         await setup_request_interception(context)
 
+        if domain:
+            from app.cookie_store import get_cookie_store
+            loaded = await get_cookie_store().load_into_context(context, domain, proxy_server)
+            if loaded:
+                logger.info(f"[review-crawl] Loaded {loaded} cookies from store for {domain}")
+
         return context, page
+
+    def _get_domain_lock(self, url: str) -> asyncio.Lock:
+        """Get or create a per-domain lock. Only one crawl per domain at a time."""
+        from urllib.parse import urlparse
+        netloc = urlparse(url).netloc.lower()
+        # Strip www. so www.example.com and example.com share a lock
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        if netloc not in self._domain_locks:
+            self._domain_locks[netloc] = asyncio.Lock()
+        return self._domain_locks[netloc]
 
     async def crawl_with_context(
         self,
@@ -352,143 +435,256 @@ class BrowserEngine:
         wait_until: str = "domcontentloaded",
         wait_for_selector: Optional[str] = None,
         wait_after_load_ms: int = 1000,
-        proxy=None
+        proxy=None,
+        client_timeout_seconds: Optional[int] = None,
+        domain: str = None,
+        proxy_server: str = None
     ) -> tuple[str, dict, bytes]:
-        """Crawl URL using an isolated context for concurrent operations."""
-        context, page = await self.create_isolated_context(javascript_enabled, proxy=proxy)
-        
-        try:
-            max_retries = 3
-            for attempt in range(max_retries):
+        """Crawl URL using an isolated context for concurrent operations.
+
+        Concurrency controls (stealthiest-first):
+        1. Per-domain lock — only one crawl per domain at a time.
+           Hitting the same domain from multiple proxy IPs simultaneously
+           is an anti-bot fingerprint and triggers Cloudflare rate limiting.
+        2. Global semaphore — caps total concurrent browser contexts.
+        3. Context creation lock — serializes proxy auth handshakes.
+        """
+        import time as _time
+
+        domain_lock = self._get_domain_lock(url)
+        if domain_lock.locked():
+            logger.info(f"Domain lock active, queuing request for {url}")
+
+        if self._context_semaphore.locked():
+            logger.info(f"Browser context limit reached ({settings.max_concurrent_crawls}), queuing request for {url}")
+
+        # Compute client deadline if X-Client-Timeout was provided
+        deadline = (_time.monotonic() + client_timeout_seconds) if client_timeout_seconds else None
+
+        async with domain_lock:
+            async with self._context_semaphore:
+                # Serialize context creation to avoid concurrent proxy auth
+                # handshakes — residential proxies reject simultaneous 407 handshakes.
+                async with self._context_create_lock:
+                    context, page = await self.create_isolated_context(javascript_enabled, proxy=proxy, domain=domain, proxy_server=proxy_server)
+
                 try:
-                    logger.info(f"Navigating to {url} (attempt {attempt + 1}/{max_retries})")
+                    max_retries = 2
+                    for attempt in range(max_retries):
+                        # Check if client has likely given up (5s safety margin)
+                        if deadline and _time.monotonic() > deadline - 5:
+                            logger.warning(f"Client timeout budget exhausted for {url}, stopping retries at attempt {attempt + 1}")
+                            break
 
-                    crawl_started_at = asyncio.get_running_loop().time()
-                    wait_strategy = wait_until if wait_until in {"domcontentloaded", "networkidle", "selector"} else "domcontentloaded"
-                    goto_wait_until = "domcontentloaded" if wait_strategy == "selector" else wait_strategy
-
-                    navigation_started_at = asyncio.get_running_loop().time()
-                    response = await page.goto(url, timeout=timeout, wait_until=goto_wait_until)
-                    navigation_ms = int((asyncio.get_running_loop().time() - navigation_started_at) * 1000)
-
-                    wait_started_at = asyncio.get_running_loop().time()
-                    if wait_strategy == "selector" and wait_for_selector:
-                        await page.wait_for_selector(wait_for_selector, timeout=timeout)
-                    if wait_after_load_ms > 0:
-                        await asyncio.sleep(wait_after_load_ms / 1000.0)
-                    wait_ms = int((asyncio.get_running_loop().time() - wait_started_at) * 1000)
-                    
-                    logger.info(f"Successfully navigated to {url}")
-                    
-                    # Execute user-provided JavaScript payload before capturing HTML
-                    if javascript_enabled and javascript_payload:
                         try:
-                            logger.info("Executing custom JavaScript payload")
-                            await page.evaluate(
-                                """
-                                async payload => {
-                                    const executor = new Function("return (async () => { " + payload + "\\n})();");
-                                    try {
-                                        return await executor();
-                                    } catch (error) {
-                                        console.error("Injected JavaScript payload failed", error);
-                                        throw error;
-                                    }
+                            logger.info(f"Navigating to {url} (attempt {attempt + 1}/{max_retries})")
+
+                            crawl_started_at = asyncio.get_running_loop().time()
+                            wait_strategy = wait_until if wait_until in {"domcontentloaded", "networkidle", "selector"} else "domcontentloaded"
+                            goto_wait_until = "domcontentloaded" if wait_strategy == "selector" else wait_strategy
+
+                            navigation_started_at = asyncio.get_running_loop().time()
+                            response = await page.goto(url, timeout=timeout, wait_until=goto_wait_until)
+                            navigation_ms = int((asyncio.get_running_loop().time() - navigation_started_at) * 1000)
+
+                            wait_started_at = asyncio.get_running_loop().time()
+                            if wait_strategy == "selector" and wait_for_selector:
+                                await page.wait_for_selector(wait_for_selector, timeout=timeout)
+                            if wait_after_load_ms > 0:
+                                await asyncio.sleep(wait_after_load_ms / 1000.0)
+                            wait_ms = int((asyncio.get_running_loop().time() - wait_started_at) * 1000)
+
+                            # Challenge detection + resolution (integrated from challenge_solver)
+                            challenge_result = None
+                            try:
+                                from app.challenge_solver import resolve_challenge
+                                challenge_result = await resolve_challenge(page, site_url=url)
+                                if challenge_result.resolved and challenge_result.method != "none":
+                                    logger.info(f"Challenge resolved via {challenge_result.method} in {challenge_result.wait_time_ms}ms")
+                                    try:
+                                        await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                                    except Exception:
+                                        await asyncio.sleep(3)
+                                    wait_ms += challenge_result.wait_time_ms
+                            except Exception as e:
+                                logger.debug(f"Challenge resolution skipped: {e}")
+
+                            logger.info(f"Successfully navigated to {url}")
+
+                            # Save cookies after successful navigation
+                            if domain:
+                                from app.cookie_store import get_cookie_store
+                                await get_cookie_store().save_from_context(context, domain, proxy_server)
+
+                            # Execute user-provided JavaScript payload before capturing HTML
+                            if javascript_enabled and javascript_payload:
+                                try:
+                                    logger.info("Executing custom JavaScript payload")
+                                    await page.evaluate(
+                                        """
+                                        async payload => {
+                                            const executor = new Function("return (async () => { " + payload + "\\n})();");
+                                            try {
+                                                return await executor();
+                                            } catch (error) {
+                                                console.error("Injected JavaScript payload failed", error);
+                                                throw error;
+                                            }
+                                        }
+                                        """,
+                                        javascript_payload
+                                    )
+                                    # Give DOM a brief moment to settle after script execution
+                                    await asyncio.sleep(0.5)
+                                    wait_ms += 500
+                                except Exception as e:
+                                    logger.warning(f"JavaScript payload execution failed: {e}")
+
+                            # Get page content
+                            content_started_at = asyncio.get_running_loop().time()
+                            content = await page.content()
+                            content_ms = int((asyncio.get_running_loop().time() - content_started_at) * 1000)
+                            logger.debug(f"Retrieved content ({len(content)} characters)")
+
+                            # Best-effort visible text capture for hidden-text prompt injection detection.
+                            visible_started_at = asyncio.get_running_loop().time()
+                            visible_payload = None
+                            try:
+                                visible_payload = await page.evaluate(_VISIBLE_TEXT_JS, {"maxChars": 20000})
+                            except Exception as e:
+                                logger.debug(f"Visible text capture failed: {e}")
+                            visible_ms = int((asyncio.get_running_loop().time() - visible_started_at) * 1000)
+
+                            # Get page info
+                            page_info = {
+                                "title": await page.title(),
+                                "url": page.url,
+                                "status_code": response.status if response else None,
+                                "content_type": "text/html",
+                                "content_length": len(content),
+                                "render_mode": "js_rendered" if javascript_enabled else "html_only",
+                                "wait_strategy": wait_strategy,
+                                "challenge_detected": bool(challenge_result and challenge_result.challenge_type.value != "none"),
+                                "challenge_resolved": bool(challenge_result and challenge_result.resolved),
+                                "challenge_method": challenge_result.method if challenge_result else None,
+                                "challenge_wait_ms": challenge_result.wait_time_ms if challenge_result else 0,
+                                "timings_ms": {
+                                    "navigation_ms": navigation_ms,
+                                    "wait_ms": wait_ms,
+                                    "content_ms": content_ms,
+                                    "visible_text_ms": visible_ms,
+                                    "total_ms": int((asyncio.get_running_loop().time() - crawl_started_at) * 1000)
                                 }
-                                """,
-                                javascript_payload
-                            )
-                            # Give DOM a brief moment to settle after script execution
-                            await asyncio.sleep(0.5)
-                            wait_ms += 500
-                        except Exception as e:
-                            logger.warning(f"JavaScript payload execution failed: {e}")
-                    
-                    # Get page content
-                    content_started_at = asyncio.get_running_loop().time()
-                    content = await page.content()
-                    content_ms = int((asyncio.get_running_loop().time() - content_started_at) * 1000)
-                    logger.debug(f"Retrieved content ({len(content)} characters)")
+                            }
 
-                    # Best-effort visible text capture for hidden-text prompt injection detection.
-                    visible_started_at = asyncio.get_running_loop().time()
-                    visible_payload = None
-                    try:
-                        visible_payload = await page.evaluate(_VISIBLE_TEXT_JS, {"maxChars": 20000})
-                    except Exception as e:
-                        logger.debug(f"Visible text capture failed: {e}")
-                    visible_ms = int((asyncio.get_running_loop().time() - visible_started_at) * 1000)
-                    
-                    # Get page info
-                    page_info = {
-                        "title": await page.title(),
-                        "url": page.url,
-                        "status_code": response.status if response else None,
-                        "content_type": "text/html",
-                        "content_length": len(content),
-                        "render_mode": "js_rendered" if javascript_enabled else "html_only",
-                        "wait_strategy": wait_strategy,
-                        "timings_ms": {
-                            "navigation_ms": navigation_ms,
-                            "wait_ms": wait_ms,
-                            "content_ms": content_ms,
-                            "visible_text_ms": visible_ms,
-                            "total_ms": int((asyncio.get_running_loop().time() - crawl_started_at) * 1000)
-                        }
-                    }
+                            if isinstance(visible_payload, dict):
+                                # Private/internal field; caller must NOT expose the raw visible text.
+                                page_info["_visible_text"] = visible_payload.get("text") or ""
+                                page_info["visible_char_count"] = int(visible_payload.get("char_count") or 0)
+                                page_info["visible_word_count"] = int(visible_payload.get("word_count") or 0)
 
-                    if isinstance(visible_payload, dict):
-                        # Private/internal field; caller must NOT expose the raw visible text.
-                        page_info["_visible_text"] = visible_payload.get("text") or ""
-                        page_info["visible_char_count"] = int(visible_payload.get("char_count") or 0)
-                        page_info["visible_word_count"] = int(visible_payload.get("word_count") or 0)
-                    
-                    # Take screenshot if requested
-                    screenshot_data = None
-                    if take_screenshot:
-                        try:
-                            # Capture full page screenshot
-                            raw_screenshot = await page.screenshot(full_page=True)
-                            logger.debug(f"Screenshot captured ({len(raw_screenshot)} bytes)")
-                            
-                            # Split image if it's very long (using viewport-proportional height)
-                            screenshot_bytesio = BytesIO(raw_screenshot)
-                            
-                            # Get viewport width from context
-                            viewport = page.viewport_size
-                            viewport_width = viewport['width'] if viewport else 1429
-                            
-                            screenshot_segments = split_image_by_height(screenshot_bytesio, viewport_width)
-                            
-                            if len(screenshot_segments) > 1:
-                                logger.info(f"Screenshot split into {len(screenshot_segments)} segments")
-                                # Return all segments as a list
-                                screenshot_data = [segment.getvalue() for segment in screenshot_segments]
-                            else:
-                                # Single image - return as bytes
-                                screenshot_data = raw_screenshot
-                                
-                        except Exception as e:
-                            logger.warning(f"Failed to take screenshot: {e}")
+                            # Take screenshot if requested
                             screenshot_data = None
-                    
-                    return content, page_info, screenshot_data
-                    
-                except Exception as e:
-                    logger.warning(f"Navigation error on attempt {attempt + 1}: {e}")
-                    if attempt == max_retries - 1:
-                        logger.error(f"Failed to navigate to {url} after {max_retries} attempts")
-                        raise
-                    
-                    # Wait before retry
-                    await asyncio.sleep(1)
-        
-        finally:
-            # Always cleanup the isolated context
-            try:
-                await context.close()
-            except Exception as e:
-                logger.warning(f"Error closing context: {e}")
+                            if take_screenshot:
+                                try:
+                                    # Capture full page screenshot
+                                    raw_screenshot = await page.screenshot(full_page=True)
+                                    logger.debug(f"Screenshot captured ({len(raw_screenshot)} bytes)")
+
+                                    # Split image if it's very long (using viewport-proportional height)
+                                    screenshot_bytesio = BytesIO(raw_screenshot)
+
+                                    # Get viewport width from context
+                                    viewport = page.viewport_size
+                                    viewport_width = viewport['width'] if viewport else 1429
+
+                                    screenshot_segments = split_image_by_height(screenshot_bytesio, viewport_width)
+
+                                    if len(screenshot_segments) > 1:
+                                        logger.info(f"Screenshot split into {len(screenshot_segments)} segments")
+                                        # Return all segments as a list
+                                        screenshot_data = [segment.getvalue() for segment in screenshot_segments]
+                                    else:
+                                        # Single image - return as bytes
+                                        screenshot_data = raw_screenshot
+
+                                except Exception as e:
+                                    logger.warning(f"Failed to take screenshot: {e}")
+                                    screenshot_data = None
+
+                            return content, page_info, screenshot_data
+
+                        except Exception as e:
+                            is_timeout = "Timeout" in type(e).__name__ or "timeout" in str(e).lower()
+
+                            # On navigation timeout, the page may have loaded a Cloudflare challenge.
+                            # Try to detect + solve it before giving up.
+                            if is_timeout:
+                                logger.info(f"Navigation timed out on attempt {attempt + 1}, checking for Cloudflare challenge on partial page")
+                                try:
+                                    from app.challenge_solver import resolve_challenge
+                                    challenge_result = await resolve_challenge(page, site_url=url)
+                                    if challenge_result.resolved and challenge_result.method != "none":
+                                        logger.info(f"Challenge resolved after timeout via {challenge_result.method} in {challenge_result.wait_time_ms}ms — extracting content")
+                                        # Challenge solved — page should now have real content. Wait for DOM to settle.
+                                        try:
+                                            await page.wait_for_load_state("domcontentloaded", timeout=15000)
+                                        except Exception:
+                                            await asyncio.sleep(3)
+
+                                        # Extract content from the now-loaded page (same as happy path)
+                                        navigation_ms = int((asyncio.get_running_loop().time() - navigation_started_at) * 1000)
+                                        content = await page.content()
+                                        page_info = {
+                                            "title": await page.title(),
+                                            "url": page.url,
+                                            "status_code": None,
+                                            "content_type": "text/html",
+                                            "content_length": len(content),
+                                            "render_mode": "js_rendered" if javascript_enabled else "html_only",
+                                            "wait_strategy": wait_strategy,
+                                            "challenge_detected": True,
+                                            "challenge_resolved": True,
+                                            "challenge_method": challenge_result.method,
+                                            "challenge_wait_ms": challenge_result.wait_time_ms,
+                                            "timings_ms": {
+                                                "navigation_ms": navigation_ms,
+                                                "wait_ms": challenge_result.wait_time_ms,
+                                                "content_ms": 0,
+                                                "visible_text_ms": 0,
+                                                "total_ms": int((asyncio.get_running_loop().time() - crawl_started_at) * 1000)
+                                            }
+                                        }
+
+                                        screenshot_data = None
+                                        if take_screenshot:
+                                            try:
+                                                screenshot_data = await page.screenshot(full_page=True)
+                                            except Exception:
+                                                pass
+
+                                        return content, page_info, screenshot_data
+                                except Exception as challenge_err:
+                                    logger.debug(f"Post-timeout challenge resolution failed: {challenge_err}")
+
+                            logger.warning(f"Navigation error on attempt {attempt + 1}: {e}")
+                            if attempt == max_retries - 1:
+                                logger.error(f"Failed to navigate to {url} after {max_retries} attempts")
+                                raise
+
+                            # Wait before retry
+                            await asyncio.sleep(1)
+
+                    # If we exit the for loop without returning (e.g. deadline break),
+                    # raise so caller doesn't get None
+                    raise TimeoutError(f"Navigation to {url} exhausted all retries or deadline")
+
+                finally:
+                    # Always cleanup the isolated context
+                    try:
+                        await context.close()
+                    except Exception as e:
+                        logger.warning(f"Error closing context: {e}")
 
     async def navigate(self, url: str, javascript_enabled: bool = True, timeout: int = 30000) -> None:
         """Navigate to URL with enhanced error handling and retry logic."""
@@ -716,8 +912,35 @@ class BrowserEngine:
             return False
     
     async def _set_realistic_headers(self) -> None:
-        """Set realistic browser headers."""
-        await self.page.set_extra_http_headers({
+        """Set realistic browser headers using browserforge when available."""
+        is_camoufox = settings.browser_engine == "camoufox"
+        # Sec-CH-UA* headers are Chrome Client Hints -- Firefox/Camoufox never sends them
+        chrome_only_prefixes = ('Sec-CH-UA',)
+
+        if _HAS_BROWSERFORGE:
+            try:
+                browser_type = 'firefox' if is_camoufox else 'chrome'
+                gen = HeaderGenerator(browser=browser_type)
+                headers = gen.generate()
+                request_headers = {}
+                for key in ['Accept', 'Accept-Language', 'Accept-Encoding',
+                            'Sec-CH-UA', 'Sec-CH-UA-Mobile', 'Sec-CH-UA-Platform',
+                            'Sec-Fetch-Dest', 'Sec-Fetch-Mode', 'Sec-Fetch-Site',
+                            'Sec-Fetch-User', 'Upgrade-Insecure-Requests']:
+                    if is_camoufox and key.startswith(chrome_only_prefixes):
+                        continue
+                    for hkey in [key, key.lower()]:
+                        if hkey in headers:
+                            request_headers[key] = headers[hkey]
+                            break
+                request_headers.setdefault('Referer', 'https://www.google.com/')
+                request_headers.setdefault('Connection', 'keep-alive')
+                await self.page.set_extra_http_headers(request_headers)
+                return
+            except Exception:
+                pass  # fall through to static headers
+
+        static_headers = {
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
@@ -726,26 +949,41 @@ class BrowserEngine:
             'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1'
-        })
+            'Sec-Fetch-User': '?1',
+            'Referer': 'https://www.google.com/',
+        }
+        if is_camoufox:
+            static_headers = {k: v for k, v in static_headers.items()
+                              if not k.startswith(chrome_only_prefixes)}
+        await self.page.set_extra_http_headers(static_headers)
     
     def _get_random_user_agent(self) -> str:
         """Return a random, realistic user agent string."""
+        if _HAS_BROWSERFORGE:
+            try:
+                gen = HeaderGenerator(browser='chrome')
+                headers = gen.generate()
+                ua = headers.get('User-Agent') or headers.get('user-agent')
+                if ua:
+                    return ua
+            except Exception:
+                pass  # fall through to manual
+
         chrome_versions = [
-            '120.0.6099.109', '121.0.6167.85', '122.0.6261.69',
-            '123.0.6312.58', '124.0.6367.60', '125.0.6422.60'
+            '133.0.6917.92', '133.0.6917.127', '134.0.6944.59',
+            '134.0.6944.85', '135.0.6972.61', '135.0.6972.108',
         ]
-        
+
         os_versions = [
-            ('Windows NT 10.0; Win64; x64', 'Windows 10'),
-            ('Windows NT 11.0; Win64; x64', 'Windows 11'),
-            ('Macintosh; Intel Mac OS X 10_15_7', 'macOS'),
+            ('Windows NT 10.0; Win64; x64', 'Windows 10/11'),
+            ('Macintosh; Intel Mac OS X 10_15_7', 'macOS Sonoma'),
+            ('Macintosh; Intel Mac OS X 14_5', 'macOS Sequoia'),
             ('X11; Linux x86_64', 'Linux'),
         ]
-        
+
         chrome_version = random.choice(chrome_versions)
         os_info, _ = random.choice(os_versions)
-        
+
         return f'Mozilla/5.0 ({os_info}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version} Safari/537.36'
     
     def _get_random_viewport(self) -> Dict[str, int]:

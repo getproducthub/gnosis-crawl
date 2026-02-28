@@ -8,12 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from datetime import datetime
 
 from app.models import (
-    CrawlRequest, CrawlResult, 
+    CrawlRequest, CrawlResult,
     MarkdownRequest, MarkdownResult,
     RawHtmlRequest, RawHtmlResult,
     BatchRequest, BatchResult,
     JobStatus, JobListResponse,
-    CacheSearchRequest, CacheUpsertRequest, CachePruneRequest
+    CacheSearchRequest, CacheUpsertRequest, CachePruneRequest,
 )
 from app.auth import get_current_user, get_user_email, get_customer_identifier
 from app.config import settings
@@ -231,9 +231,10 @@ async def crawl_single_url(
         )
 
 
-@router.post("/markdown", response_model=MarkdownResult) 
+@router.post("/markdown", response_model=MarkdownResult)
 async def crawl_markdown_only(
     request: MarkdownRequest,
+    x_client_timeout: Optional[str] = Header(None, alias="X-Client-Timeout"),
     user_email: Optional[str] = Depends(get_optional_user_email)
 ):
     """
@@ -258,6 +259,9 @@ async def crawl_markdown_only(
         from app.stealth import resolve_proxy
         proxy = resolve_proxy(getattr(request.options, 'proxy', None))
 
+        # Parse client timeout budget from X-Client-Timeout header
+        client_timeout_seconds = int(x_client_timeout) if x_client_timeout and x_client_timeout.isdigit() else None
+
         per_url_results: List[Dict[str, Any]] = []
         for target in url_candidates:
             crawl_result = await crawler.crawl_url(
@@ -271,7 +275,8 @@ async def crawl_markdown_only(
                 wait_for_selector=request.options.wait_for_selector,
                 wait_after_load_ms=request.options.wait_after_load_ms,
                 retry_with_js_if_thin=request.options.retry_with_js_if_thin,
-                proxy=proxy
+                proxy=proxy,
+                client_timeout_seconds=client_timeout_seconds
             )
             payload = _crawl_result_to_payload(crawl_result, include_html=False)
             cache_doc = None

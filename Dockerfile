@@ -55,16 +55,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Playwright browsers (chromium) to match the installed Python package version
 RUN playwright install --with-deps chromium
 
-# Fetch Camoufox browser binary
-RUN python -m camoufox fetch
-
 # Copy application code
 COPY app/ ./app/
 
-# Create storage directory
+# Create storage directory and camoufox cache owned by app user
 RUN mkdir -p storage && chown -R app:app storage
 
-# Switch to non-root user
+# Fetch camoufox as root (needs write access to system packages for GeoLite2
+# MMDB), but redirect HOME so the 707MB browser binary caches into
+# /home/app/.cache/camoufox/ instead of /root/.cache/ (inaccessible at runtime).
+RUN HOME=/home/app python -m camoufox fetch \
+    && chown -R app:app /home/app/.cache
+
+# Switch to non-root user for runtime
 USER app
 
 # Expose port

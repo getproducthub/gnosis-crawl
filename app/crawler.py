@@ -136,7 +136,10 @@ class CrawlerEngine:
         wait_for_selector: Optional[str] = None,
         wait_after_load_ms: int = 1000,
         retry_with_js_if_thin: bool = False,
-        proxy=None
+        proxy=None,
+        client_timeout_seconds: Optional[int] = None,
+        domain: str = None,
+        proxy_server: str = None
     ) -> CrawlResult:
         """
         Crawl a single URL and return comprehensive results.
@@ -190,7 +193,10 @@ class CrawlerEngine:
                     wait_until=wait_until,
                     wait_for_selector=wait_for_selector,
                     wait_after_load_ms=wait_after_load_ms,
-                    proxy=proxy
+                    proxy=proxy,
+                    client_timeout_seconds=client_timeout_seconds,
+                    domain=domain,
+                    proxy_server=proxy_server
                 )
 
             result.html, result.page_info, screenshot_data = await run_capture(javascript)
@@ -345,6 +351,12 @@ class CrawlerEngine:
 
     def _detect_block_signals(self, html: str, markdown: str, status_code: Optional[int]) -> tuple[bool, str, bool]:
         combined = f"{html or ''}\n{markdown or ''}".lower()
+        html_len = len(html or "")
+        markdown_len = len(markdown or "")
+        # Real challenge pages are small (<3K HTML). If we have 5K+ HTML or 2K+
+        # markdown, block phrases are from boilerplate scripts/headers, not a challenge.
+        has_substantial_content = html_len > 5000 or markdown_len > 2000
+
         patterns = [
             ("cloudflare", "cloudflare_challenge"),
             ("verify your session", "session_verification"),
@@ -357,9 +369,25 @@ class CrawlerEngine:
 
         for phrase, reason in patterns:
             if phrase in combined:
+                # Don't flag as blocked when we have substantial content — real challenge
+                # pages are small (<5K HTML). If we have 10K+ chars, the block phrase is
+                # likely from boilerplate scripts/headers, not an actual challenge.
+                if has_substantial_content:
+                    logger.debug(
+                        f"Block phrase '{phrase}' found but page has substantial content "
+                        f"(html={html_len}, md={markdown_len}), not flagging as blocked"
+                    )
+                    continue
                 return True, reason, "captcha" in phrase or "captcha" in combined
 
         if status_code in {401, 403, 429, 503}:
+            # 403 with substantial content = soft-block (page served despite status code)
+            if has_substantial_content and status_code == 403:
+                logger.debug(
+                    f"HTTP 403 but page has substantial content "
+                    f"(html={html_len}, md={markdown_len}), not flagging as blocked"
+                )
+                return False, "", False
             return True, f"http_{status_code}", False
 
         return False, "", False
@@ -376,7 +404,8 @@ class CrawlerEngine:
         if blocked:
             return "blocked"
 
-        # HTTP errors should never be "sufficient" for downstream summarization.
+        # HTTP errors should never be "sufficient" for downstream summarization,
+        # UNLESS we have substantial content (soft-block: page served despite status code).
         if status_code is not None:
             try:
                 code = int(status_code)
@@ -386,7 +415,11 @@ class CrawlerEngine:
                 if code >= 500:
                     return "blocked"
                 if code >= 400:
-                    return "minimal"
+                    # 4xx with substantial content = soft-block, don't downgrade
+                    if body_char_count > 2000:
+                        pass  # fall through to normal quality assessment
+                    else:
+                        return "minimal"
 
         normalized = (content or "").lower()
         error_page_signatures = [

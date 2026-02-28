@@ -24,11 +24,12 @@ services:
       - BROWSER_ENGINE=camoufox
       - STEALTH_ENABLED=true
       - BLOCK_TRACKING_DOMAINS=true
-      # Residential Proxy (uncomment and configure)
-      # - PROXY_SERVER=http://gate.decodo.com:10001
-      # - PROXY_USERNAME=spwod13p0r
-      # - PROXY_PASSWORD=your_password
-      # - PROXY_BYPASS=localhost,127.0.0.1
+      # Residential proxy — gate.decodo.com:7000 rotates IP per request.
+      # Required for Cloudflare-protected review sites (G2, Capterra, etc.)
+      - PROXY_SERVER=http://gate.decodo.com:7000
+      - PROXY_USERNAME=${PROXY_USERNAME}
+      - PROXY_PASSWORD=${PROXY_PASSWORD}
+      - PROXY_BYPASS=localhost,127.0.0.1
     volumes:
       - gnosis_shared_storage:/app/storage
       - ./app:/app/app  # Mount for development hot reload

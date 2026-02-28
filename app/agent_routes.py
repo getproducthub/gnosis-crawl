@@ -11,7 +11,7 @@ import logging
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.routes import get_optional_user_email
 from app.config import settings
@@ -157,7 +157,10 @@ def _require_ghost_enabled():
 
 
 @router.post("/ghost", response_model=GhostExtractResponse, dependencies=[Depends(_require_ghost_enabled)])
-async def agent_ghost(request: GhostExtractRequest):
+async def agent_ghost(
+    request: GhostExtractRequest,
+    x_client_timeout: Optional[str] = Header(None, alias="X-Client-Timeout"),
+):
     """Ghost Protocol: screenshot a URL and extract content via vision AI.
 
     Bypasses DOM-based anti-bot detection by reading rendered pixels instead.
@@ -176,11 +179,19 @@ async def agent_ghost(request: GhostExtractRequest):
 
     proxy = resolve_proxy(getattr(request, 'proxy', None))
 
+    # Respect client timeout budget: cap the ghost timeout to the remaining client budget
+    effective_timeout = request.timeout
+    if x_client_timeout and x_client_timeout.isdigit():
+        client_budget = int(x_client_timeout)
+        if client_budget > 0 and (effective_timeout is None or client_budget < effective_timeout):
+            effective_timeout = client_budget
+            logger.info("Ghost timeout capped to client budget: %ds", client_budget)
+
     result = await run_ghost_protocol(
         request.url,
         provider=provider,
         max_width=settings.agent_ghost_max_image_width,
-        timeout=request.timeout,
+        timeout=effective_timeout,
         prompt=request.prompt or GHOST_EXTRACTION_PROMPT,
         proxy=proxy,
     )

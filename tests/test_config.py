@@ -106,6 +106,74 @@ class TestBuildRunConfig:
         assert cfg.redact_secrets is False
 
 
+class TestStickyProxyConfig:
+    """Tests for get_sticky_proxy_config() — Decodo sticky session proxy."""
+
+    def test_returns_none_when_no_proxy_server(self):
+        s = Settings(_env_file=None, proxy_server=None)
+        assert s.get_sticky_proxy_config() is None
+
+    def test_returns_sticky_username_format(self):
+        s = Settings(
+            _env_file=None,
+            proxy_server="http://gate.decodo.com:7000",
+            proxy_username="spwod13p0r",
+            proxy_password="secret123",
+        )
+        config = s.get_sticky_proxy_config(session_id="abc123", duration_minutes=30)
+        assert config is not None
+        assert config["server"] == "http://gate.decodo.com:7000"
+        assert config["username"] == "user-spwod13p0r-country-us-session-abc123-sessionduration-30"
+        assert config["password"] == "secret123"
+
+    def test_generates_session_id_when_not_provided(self):
+        s = Settings(
+            _env_file=None,
+            proxy_server="http://gate.decodo.com:7000",
+            proxy_username="spwod13p0r",
+            proxy_password="secret123",
+        )
+        config = s.get_sticky_proxy_config()
+        assert config is not None
+        # Should contain a generated session ID (12-char hex)
+        assert "session-" in config["username"]
+        assert "sessionduration-30" in config["username"]
+
+    def test_custom_duration(self):
+        s = Settings(
+            _env_file=None,
+            proxy_server="http://gate.decodo.com:7000",
+            proxy_username="spwod13p0r",
+            proxy_password="secret123",
+        )
+        config = s.get_sticky_proxy_config(session_id="test", duration_minutes=60)
+        assert "sessionduration-60" in config["username"]
+
+    def test_no_username_still_returns_config(self):
+        s = Settings(
+            _env_file=None,
+            proxy_server="http://gate.decodo.com:7000",
+            proxy_username=None,
+            proxy_password="secret123",
+        )
+        config = s.get_sticky_proxy_config()
+        assert config is not None
+        assert config["server"] == "http://gate.decodo.com:7000"
+        assert "username" not in config or config.get("username") is None
+
+    def test_does_not_include_bypass(self):
+        """Sticky proxy config should not include bypass (Camoufox doesn't support it)."""
+        s = Settings(
+            _env_file=None,
+            proxy_server="http://gate.decodo.com:7000",
+            proxy_username="spwod13p0r",
+            proxy_password="secret123",
+            proxy_bypass="localhost",
+        )
+        config = s.get_sticky_proxy_config(session_id="test")
+        assert "bypass" not in config
+
+
 class TestGlobalSettings:
     def test_singleton_exists(self):
         assert settings is not None

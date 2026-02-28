@@ -35,17 +35,34 @@ class TestApplyStealth:
 
 @pytest.mark.asyncio
 class TestSetupRequestInterception:
-    async def test_registers_route_when_enabled(self):
-        """setup_request_interception() registers a route handler when enabled."""
+    async def test_registers_catchall_route_for_chromium(self):
+        """Chromium engine: registers a single catch-all route handler."""
         mock_context = AsyncMock()
 
         with patch("app.stealth.settings") as mock_settings:
             mock_settings.block_tracking_domains = True
+            mock_settings.browser_engine = "chromium"
             from app.stealth import setup_request_interception
             await setup_request_interception(mock_context)
             mock_context.route.assert_called_once()
-            # First arg should be "**/*"
             assert mock_context.route.call_args[0][0] == "**/*"
+
+    async def test_registers_per_domain_routes_for_camoufox(self):
+        """Camoufox engine: registers per-domain abort routes (no continue_())."""
+        mock_context = AsyncMock()
+
+        with patch("app.stealth.settings") as mock_settings:
+            mock_settings.block_tracking_domains = True
+            mock_settings.browser_engine = "camoufox"
+            from app.stealth import setup_request_interception, BLOCKED_DOMAINS
+            await setup_request_interception(mock_context)
+            # One route per blocked domain
+            assert mock_context.route.call_count == len(BLOCKED_DOMAINS)
+            # Each pattern should be domain-specific, not catch-all
+            for call in mock_context.route.call_args_list:
+                pattern = call[0][0]
+                assert pattern != "**/*"
+                assert pattern.startswith("**/*")
 
     async def test_noop_when_disabled(self):
         """setup_request_interception() does nothing when tracking blocking is disabled."""

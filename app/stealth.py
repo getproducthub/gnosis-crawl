@@ -49,9 +49,80 @@ async def apply_stealth(context) -> None:
         logger.warning("Failed to apply stealth patches: %s", exc)
 
 
+_CHROMIUM_JS_PATCHES = """
+// Fix Notification.permission (headless returns 'denied', a detection signal)
+try {
+    Object.defineProperty(Notification, 'permission', {
+        get: () => 'default',
+        configurable: true
+    });
+} catch(e) {}
+
+// Remove Playwright global markers
+const pwGlobals = Object.getOwnPropertyNames(window).filter(
+    k => k.startsWith('__playwright') || k === '__pwInitScripts'
+);
+for (const key of pwGlobals) {
+    try { delete window[key]; } catch(e) {}
+}
+
+// WebGL renderer spoofing (hide SwiftShader/headless indicators)
+try {
+    const getParam = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function(param) {
+        if (param === 37445) return 'Google Inc. (Intel)';
+        if (param === 37446) return 'ANGLE (Intel, Intel(R) UHD Graphics 630, OpenGL 4.1)';
+        return getParam.call(this, param);
+    };
+} catch(e) {}
+
+// AudioContext fingerprint noise
+try {
+    const origGetFloatFreqData = AnalyserNode.prototype.getFloatFrequencyData;
+    AnalyserNode.prototype.getFloatFrequencyData = function(array) {
+        origGetFloatFreqData.call(this, array);
+        for (let i = 0; i < array.length; i++) {
+            array[i] += (Math.random() - 0.5) * 0.001;
+        }
+    };
+} catch(e) {}
+"""
+
+
+async def apply_chromium_js_patches(page) -> None:
+    """Inject JS patches to hide Chromium/Playwright detection signals.
+
+    Skipped for Camoufox which handles stealth at C++ level.
+    """
+    if settings.browser_engine == "camoufox":
+        return
+    try:
+        await page.add_init_script(_CHROMIUM_JS_PATCHES)
+        logger.debug("Applied Chromium JS stealth patches")
+    except Exception as exc:
+        logger.warning("Failed to apply JS stealth patches: %s", exc)
+
+
 async def setup_request_interception(context) -> None:
-    """Register request interception to block tracking/analytics domains."""
+    """Register request interception to block tracking/analytics domains.
+
+    For Camoufox (Firefox-based) with proxy: uses per-domain route patterns
+    that only call ``route.abort()``.  A catch-all ``context.route("**/*", ...)``
+    would require ``route.continue_()`` for non-blocked requests, which fails
+    on Firefox to re-route through the proxy.  Domain-specific routes avoid
+    this — unmatched requests flow through the proxy normally.
+    """
     if not settings.block_tracking_domains:
+        return
+
+    if settings.browser_engine == "camoufox":
+        # Per-domain routes: only abort(), never continue_()
+        for domain in BLOCKED_DOMAINS:
+            await context.route(
+                f"**/*{domain}*",
+                lambda route: route.abort(),
+            )
+        logger.debug("Camoufox: blocking %d tracking domains via per-domain routes", len(BLOCKED_DOMAINS))
         return
 
     async def _route_handler(route):

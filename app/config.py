@@ -3,6 +3,7 @@ Configuration management for gnosis-crawl
 Environment-based configuration following gnosis-ocr pattern
 """
 import os
+import uuid
 from typing import Optional
 from pydantic_settings import BaseSettings
 
@@ -31,7 +32,7 @@ class Settings(BaseSettings):
     enable_screenshots: bool = False
     
     # Browser Configuration
-    browser_engine: str = "chromium"  # "chromium" or "camoufox"
+    browser_engine: str = "camoufox"  # "chromium" or "camoufox"
     browser_headless: bool = True
     browser_timeout: int = 30000
     
@@ -85,9 +86,18 @@ class Settings(BaseSettings):
     stealth_enabled: bool = True
     block_tracking_domains: bool = True
 
+    # TLS Impersonation
+    tls_impersonate_chromium: bool = False
+
+    # HTTP Pre-check Configuration
+    http_precheck_enabled: bool = False
+    http_precheck_timeout: int = 15
+    http_precheck_impersonate: str = "chrome135"
+
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"
         
         # Map environment variable names
         fields = {
@@ -131,6 +141,29 @@ class Settings(BaseSettings):
             config["password"] = self.proxy_password
         if self.proxy_bypass:
             config["bypass"] = self.proxy_bypass
+        return config
+
+    def get_sticky_proxy_config(self, session_id: str = None, duration_minutes: int = 30) -> Optional[dict]:
+        """Return proxy config with Decodo sticky session.
+
+        Sticky sessions keep the same exit IP for the session duration,
+        which is required for Cloudflare challenge resolution (the challenge
+        page and verification callback must come from the same IP).
+
+        Username format: user-{USERNAME}-country-us-session-{ID}-sessionduration-{MINUTES}
+        """
+        if not self.proxy_server:
+            return None
+
+        config = {"server": self.proxy_server}
+
+        if self.proxy_username:
+            sid = session_id or uuid.uuid4().hex[:12]
+            config["username"] = f"user-{self.proxy_username}-country-us-session-{sid}-sessionduration-{duration_minutes}"
+
+        if self.proxy_password:
+            config["password"] = self.proxy_password
+
         return config
 
     def build_run_config(self):

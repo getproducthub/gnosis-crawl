@@ -26,9 +26,15 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+try:
+    from patchright.async_api import async_playwright as async_patchright
+    _HAS_PATCHRIGHT = True
+except ImportError:
+    _HAS_PATCHRIGHT = False
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Playwright
 
 from app.config import settings
+from app.browser import CHROMIUM_STEALTH_ARGS
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +75,10 @@ class BrowserPool:
                 return
 
             logger.info("Starting browser pool (size=%d)", self.size)
-            self._playwright = await async_playwright().start()
+            if _HAS_PATCHRIGHT:
+                self._playwright = await async_patchright().start()
+            else:
+                self._playwright = await async_playwright().start()
 
             for i in range(self.size):
                 slot = await self._create_slot()
@@ -173,15 +182,7 @@ class BrowserPool:
         """Spin up a fresh browser, context, and page."""
         browser = await self._playwright.chromium.launch(
             headless=True,
-            args=[
-                "--disable-gpu",
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-extensions",
-                "--mute-audio",
-                "--no-first-run",
-                "--headless=new",
-            ],
+            args=list(CHROMIUM_STEALTH_ARGS) + ["--headless=new"],
         )
 
         viewport = {
@@ -194,7 +195,7 @@ class BrowserPool:
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.6367.60 Safari/537.36"
+                "Chrome/135.0.6972.61 Safari/537.36"
             ),
             locale="en-US",
             timezone_id="America/New_York",
