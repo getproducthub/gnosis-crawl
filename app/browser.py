@@ -1,5 +1,5 @@
 """
-Browser automation engine for gnosis-crawl
+Browser automation engine for Grub Crawler
 Ported from gnosis-wraith with enhanced stability and anti-detection
 """
 import os

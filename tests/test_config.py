@@ -12,7 +12,7 @@ class TestSettings:
     def test_defaults(self):
         s = Settings(_env_file=None)
         assert s.host == "0.0.0.0"
-        assert s.port == 8080
+        assert s.port == 6792
         assert s.debug is False
         assert s.agent_enabled is False
         assert s.agent_provider == "openai"

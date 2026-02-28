@@ -1,5 +1,5 @@
 """
-Remote API Integration Tests for gnosis-crawl
+Remote API Integration Tests for grub-crawl
 Tests deployed API with various scenarios (requires environment configuration)
 
 Run with: pytest -v -m remote tests/test_remote_integration.py
@@ -16,9 +16,9 @@ pytestmark = pytest.mark.remote
 
 
 # Configuration from environment
-API_BASE_URL = os.getenv("GNOSIS_CRAWL_API_URL", "https://crawler-agent-11733-2111b026-6tr5gw8l.onporter.run/")
-CUSTOMER_ID = os.getenv("GNOSIS_CRAWL_CUSTOMER_ID", "kordless")
-BEARER_TOKEN = os.getenv("GNOSIS_CRAWL_BEARER_TOKEN")  # Optional
+API_BASE_URL = os.getenv("GRUB_CRAWL_API_URL", "https://crawler-agent-11733-2111b026-6tr5gw8l.onporter.run/")
+CUSTOMER_ID = os.getenv("GRUB_CRAWL_CUSTOMER_ID", "kordless")
+BEARER_TOKEN = os.getenv("GRUB_CRAWL_BEARER_TOKEN")  # Optional
 
 # Test URLs
 TEST_URLS = {
@@ -53,7 +53,7 @@ def api_client():
 def check_api_configured():
     """Skip tests if API URL not configured"""
     if not API_BASE_URL or "your-deployed-url" in API_BASE_URL:
-        pytest.skip("API_BASE_URL not configured. Set GNOSIS_CRAWL_API_URL environment variable.")
+        pytest.skip("API_BASE_URL not configured. Set GRUB_CRAWL_API_URL environment variable.")
 
 
 class TestHealthEndpoint:
@@ -116,10 +116,10 @@ class TestSingleCrawl:
 
         if api_client["bearer_token"]:
             # With auth: should use authenticated user email
-            assert customer_id != "anonymous@gnosis-crawl.local"
+            assert customer_id != "anonymous@grub-crawl.local"
         else:
             # Without auth: should use anonymous
-            assert customer_id == "anonymous@gnosis-crawl.local"
+            assert customer_id == "anonymous@grub-crawl.local"
 
 
 class TestMarkdownEndpoint:
@@ -243,7 +243,7 @@ class TestAuthentication:
         # With auth, customer_identifier should be user email from token
         customer_id = data.get("metadata", {}).get("customer_identifier")
         assert customer_id is not None
-        assert customer_id != "anonymous@gnosis-crawl.local"
+        assert customer_id != "anonymous@grub-crawl.local"
 
     def test_without_bearer_token_requires_customer_id(self, check_api_configured):
         """Without auth, customer_id should be required or default to anonymous"""
@@ -265,7 +265,7 @@ class TestAuthentication:
         data = response.json()
         # Should use anonymous identifier
         customer_id = data.get("metadata", {}).get("customer_identifier")
-        assert customer_id == "anonymous@gnosis-crawl.local"
+        assert customer_id == "anonymous@grub-crawl.local"
 
 
 @pytest.mark.slow

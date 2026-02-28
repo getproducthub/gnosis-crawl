@@ -11,16 +11,18 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet?style=flat-square)](https://modelcontextprotocol.io)
 [![Ghost Protocol](https://img.shields.io/badge/Ghost_Protocol-active-ff6b6b?style=flat-square)](#ghost-protocol)
 [![Live Stream](https://img.shields.io/badge/Live_Stream-CDP/WebSocket-00d4ff?style=flat-square)](#live-stream)
+[![Camoufox](https://img.shields.io/badge/Camoufox-anti--detect-ff8c00?style=flat-square)](#anti-detection)
+[![Proxy](https://img.shields.io/badge/Proxy-per--request-8b5cf6?style=flat-square)](#anti-detection)
 
 <br/>
 
-**The world's only agentic web crawler.**
+**The world's only agentic web crawler with a peer-to-peer mesh.**
 
 *Built using the brain of a human that knows about distributed crawling architectures.*
 
 <br/>
 
-<a href="#api-endpoints">Endpoints</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#live-stream">Live Stream</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
+<a href="#api-endpoints">Endpoints</a> · <a href="#mesh">Mesh</a> · <a href="#anti-detection">Anti-Detection</a> · <a href="#ghost-protocol">Ghost Protocol</a> · <a href="#live-stream">Live Stream</a> · <a href="#mcp-tools-grub-crawlpy">MCP Tools</a> · <a href="#quick-start">Quick Start</a> · <a href="MASTER_PLAN.md">Architecture</a>
 
 ---
 
@@ -32,15 +34,28 @@ Grub Crawler gets dirty so you don't have to. It penetrates every layer of prote
 
 ## Why Grub
 
-| | Traditional Crawlers | **Grub Crawler** |
-|---|---|---|
-| Anti-bot bypass | ❌ | ✅ Ghost Protocol (vision AI) |
-| Autonomous browsing | ❌ | ✅ Agent loop with planning |
-| Multi-page reasoning | ❌ | ✅ Bounded state machine |
-| LLM fallback rotation | ❌ | ✅ OpenAI / Anthropic / Ollama |
-| Policy enforcement | ❌ | ✅ Domain gates, secret redaction |
-| Live browser stream | ❌ | ✅ CDP screencast over WebSocket/MJPEG |
-| Replayable traces | ❌ | ✅ Full JSON trace per run |
+We integrated features from every major crawler — then added what none of them have.
+
+| Feature | Crawl4AI | Firecrawl | Apify | Scrapy | Browserbase | Scrapfly | **Grub** |
+|---|---|---|---|---|---|---|---|
+| **Self-hosted** | ✅ | ⚠️ limited | ✅ Crawlee | ✅ | ❌ cloud | ❌ cloud | ✅ **full** |
+| **Anti-detect browser** | stealth plugin | ❌ cloud only | Camoufox template | ❌ | custom Chromium | proprietary | ✅ **Camoufox** |
+| **Ghost Protocol** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **auto fallback** |
+| **Per-request proxy** | ✅ escalation | ⚠️ cloud only | ✅ built-in | middleware | ✅ managed | ✅ 130M+ IPs | ✅ **per-request** |
+| **Stealth patches** | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ **opt-in** |
+| **Agent loop** | ✅ agentic | ✅ /agent | ✅ AI Agent | ❌ spiders | ✅ Stagehand | ⚠️ via integrations | ✅ **bounded SM** |
+| **Live browser stream** | ✅ WebSocket | ✅ Live View | ⚠️ pool only | ❌ | ✅ iFrame + CDP | ✅ CDP | ✅ **WS + MJPEG** |
+| **Markdown output** | ✅ Fit Markdown | ✅ core | ✅ RAG Browser | ❌ | ✅ via MCP | ✅ built-in | ✅ **core** |
+| **MCP tools** | ✅ community | ✅ official | ✅ official | ⚠️ community | ✅ official | ✅ official | ✅ **15 tools** |
+| **Multi-provider LLM** | ✅ all LLMs | ⚠️ Gemini | ⚠️ per-Actor | ❌ | ⚠️ Stagehand | ⚠️ via frameworks | ✅ **OpenAI/Anthropic/Ollama** |
+| **Policy enforcement** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **domain gates + redaction** |
+| **Replayable traces** | ❌ | ❌ | ⚠️ run logs | ❌ | ⚠️ session replay | ❌ | ✅ **full JSON trace** |
+| **Prompt injection defense** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **quarantine + visible-text diff** |
+| **License** | Apache 2.0 | AGPL-3.0 | MIT (Crawlee) | BSD | MIT (Stagehand) | Proprietary | **Proprietary** |
+| **Pricing** | Free | Free–$333/mo | Free–$999/mo | Free | Free–$99/mo | Usage-based | **Self-hosted** |
+| **Mesh P2P** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ **agents talking to agents** |
+
+**Only Grub Crawler has Ghost Protocol** — automatic vision-based fallback that screenshots blocked pages and extracts content via LLM when every other tool just fails. Prevention (Camoufox + proxy + stealth) handles 95% of blocks. Ghost Protocol handles the rest.
 
 ## API Endpoints
 
@@ -97,11 +112,22 @@ Grub Crawler gets dirty so you don't have to. It penetrates every layer of prote
 | `GET`  | `/stream/{session_id}/status` | Stream session status | Live |
 | `GET`  | `/stream/pool/status` | Browser pool status | Live |
 
+### Mesh
+| Method | Path | Description | Status |
+|--------|------|-------------|--------|
+| `POST` | `/mesh/join` | Peer join + gossip discovery | Live |
+| `POST` | `/mesh/heartbeat` | Peer heartbeat with load metrics | Live |
+| `POST` | `/mesh/execute` | Cross-node tool execution (1-hop max) | Live |
+| `POST` | `/mesh/leave` | Peer departure notification | Live |
+| `GET`  | `/mesh/peers` | List known peers + health status | Live |
+| `GET`  | `/mesh/status` | This node's mesh status + load | Live |
+
 ### System
 | Method | Path | Description | Status |
 |--------|------|-------------|--------|
-| `GET`  | `/health` | Health check + tool count | Live |
+| `GET`  | `/health` | Health check + tool count + mesh info | Live |
 | `GET`  | `/tools` | List registered AHP tools | Live |
+| `GET`  | `/site` | Embedded landing page | Live |
 | `GET`  | `/{tool_name}` | Execute AHP tool (catch-all) | Live |
 
 ## MCP Tools (grub-crawl.py)
@@ -123,6 +149,8 @@ The MCP bridge exposes all capabilities to any MCP-compatible host:
 | `agent_run` | Submit task to autonomous agent (Mode B) | Live |
 | `agent_status` | Check agent run status | Live |
 | `ghost_extract` | Ghost Protocol: screenshot + vision AI extraction | Live |
+| `mesh_peers` | List mesh peers and their health/load status | Live |
+| `mesh_status` | Get this node's mesh status and load metrics | Live |
 | `set_auth_token` | Save auth token to .wraithenv | Live |
 | `crawl_status` | Report configuration and connection | Live |
 
@@ -167,15 +195,32 @@ The MCP bridge exposes all capabilities to any MCP-compatible host:
 | `jobs.py` | `JobType` enum (incl. `AGENT_RUN`), `JobManager`, `JobProcessor` | Done |
 | `models.py` | All Pydantic models incl. `AgentRunRequest/Response` | Done |
 
+### Anti-Detection (`app/`)
+| File | Purpose | Status |
+|------|---------|--------|
+| `stealth.py` | playwright-stealth patches, tracker domain blocking | Done |
+| `proxy.py` | Per-request proxy resolution with env fallback | Done |
+
+### Mesh (`app/mesh/`)
+| File | Purpose | Status |
+|------|---------|--------|
+| `models.py` | Wire protocol models: NodeInfo, NodeLoad, MeshToolRequest/Response, PeerState | Done |
+| `auth.py` | HMAC-SHA256 token signing/verification with 60s TTL | Done |
+| `client.py` | httpx async client for join, heartbeat, leave, execute_tool | Done |
+| `coordinator.py` | Lifecycle, peer table, heartbeat loop with seed retry | Done |
+| `routes.py` | `/mesh/*` endpoints — join, heartbeat, execute, leave, peers, status | Done |
+| `router.py` | Load scoring + target selection (pure logic, no I/O) | Done |
+| `dispatcher.py` | MeshDispatcher wrapping local Dispatcher for transparent routing | Done |
+
 ### Infrastructure
 | File | Purpose | Status |
 |------|---------|--------|
-| `config.py` | All env vars incl. agent + provider + ghost config | Done |
+| `config.py` | All env vars incl. agent + provider + ghost + proxy + stealth config | Done |
 | `storage.py` | User-partitioned storage (local filesystem / GCS) | Done |
-| `crawler.py` | Playwright crawling engine | Done |
+| `crawler.py` | Playwright crawling engine with proxy support | Done |
 | `markdown.py` | HTML to markdown conversion | Done |
-| `browser.py` | Browser automation utilities | Done |
-| `browser_pool.py` | Persistent Chromium pool with lease/return pattern | Done |
+| `browser.py` | Browser automation — Chromium + Camoufox engines | Done |
+| `browser_pool.py` | Persistent browser pool with lease/return pattern | Done |
 | `stream.py` | CDP screencast → WebSocket/MJPEG relay + interactive commands | Done |
 
 ## Agent State Machine
@@ -197,6 +242,53 @@ Stop conditions enforced every iteration:
 - `policy_denied` (blocked tool/domain)
 - `completed` (agent responds with text)
 
+## Anti-Detection
+
+Three layers of anti-detection that stack together. Prevention stops blocks before they happen. Ghost Protocol handles them after.
+
+### Camoufox Engine
+
+Pluggable anti-detect browser with C++-level fingerprint spoofing. No manual user-agent tricks — Camoufox generates realistic fingerprints per context at the browser level, including canvas, WebGL, fonts, and navigator properties.
+
+```bash
+# Switch engine (default: chromium)
+BROWSER_ENGINE=camoufox
+```
+
+### Per-Request Proxy
+
+Route crawl traffic through residential, datacenter, or custom proxy pools. Per-request override with env-based defaults. Full Playwright-compatible proxy config.
+
+```bash
+# Env-based default
+PROXY_SERVER=http://proxy.example.com:10001
+PROXY_USERNAME=your_username
+PROXY_PASSWORD=your_password
+
+# Or per-request
+curl -X POST http://localhost:6792/api/crawl \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "options": {
+      "proxy": {
+        "server": "http://proxy.example.com:10001",
+        "username": "your_username",
+        "password": "your_password"
+      }
+    }
+  }'
+```
+
+### Stealth Mode
+
+Opt-in `playwright-stealth` patches for Chromium (skipped for Camoufox where it's built-in). Blocks 20+ tracking/analytics domains (Google Analytics, DataDome, PerimeterX, etc.) to reduce fingerprint surface.
+
+```bash
+STEALTH_ENABLED=true
+BLOCK_TRACKING_DOMAINS=true
+```
+
 ## Ghost Protocol
 
 When a crawl result signals an anti-bot block (Cloudflare challenge, CAPTCHA,
@@ -211,13 +303,81 @@ This bypasses DOM-based anti-bot detection entirely.
 
 Requires `AGENT_GHOST_ENABLED=true`. Auto-triggers on detected blocks when `AGENT_GHOST_AUTO_TRIGGER=true`.
 
+## Mesh
+
+Agents talking to agents. Every Grub instance is both a worker and a coordinator. Local node offloads to cloud, cloud delegates to local. Tool calls cross the wire transparently.
+
+```
+Node A (local)                    Node B (cloud)
+┌─────────────┐                  ┌─────────────┐
+│ AgentEngine  │                  │ AgentEngine  │
+│     ↓        │                  │     ↓        │
+│ MeshDispatcher ──── HTTP ────→ MeshDispatcher │
+│     ↓        │                  │     ↓        │
+│ Dispatcher   │                  │ Dispatcher   │
+│     ↓        │                  │     ↓        │
+│ ToolRegistry │                  │ ToolRegistry │
+└─────────────┘                  └─────────────┘
+       ↕ heartbeat (15s)                ↕
+       └────────────────────────────────┘
+```
+
+**How it works:**
+- **Discovery** — nodes join via seed peer list, then gossip (1-hop) to learn about others
+- **Heartbeat** — every 15s, nodes exchange load metrics. 3 missed = unhealthy. 2 min = removed
+- **Routing** — MeshDispatcher scores all nodes by load, locality, and affinity, then routes tool calls to the best node
+- **1-hop max** — Node A → B only, never A → B → C. Prevents routing loops
+- **Local fallback** — if remote execution fails, falls back to local Dispatcher
+- **HMAC auth** — all mesh traffic is signed with a shared secret (SHA-256, 60s TTL)
+
+### Run a 2-Node Mesh Locally
+
+```bash
+# Docker Compose (recommended)
+./deploy.sh mesh           # Linux/Mac
+./deploy.ps1 -Target mesh  # Windows
+
+# Verify
+curl http://localhost:6792/mesh/peers  # Node A sees Node B
+curl http://localhost:6793/mesh/peers  # Node B sees Node A
+```
+
+### Connect Local to Cloud Run
+
+```bash
+# Deploy to Cloud Run with mesh
+./deploy.sh cloudrun latest --mesh-peer http://your-local-ip:6792 --mesh-secret mysecret
+
+# Start local node
+MESH_ENABLED=true MESH_SECRET=mysecret MESH_PEERS=https://your-cloud-run-url \
+  MESH_ADVERTISE_URL=http://your-local-ip:6792 \
+  uvicorn app.main:app --port 6792
+```
+
+### Manual Setup
+
+```bash
+# Node A
+MESH_ENABLED=true MESH_NODE_NAME=local MESH_SECRET=test123 \
+  MESH_ADVERTISE_URL=http://localhost:6792 \
+  uvicorn app.main:app --port 6792
+
+# Node B
+MESH_ENABLED=true MESH_NODE_NAME=cloud MESH_SECRET=test123 \
+  MESH_PEERS=http://localhost:6792 \
+  MESH_ADVERTISE_URL=http://localhost:8081 \
+  uvicorn app.main:app --port 8081
+```
+
+When mesh is disabled (`MESH_ENABLED=false`, the default), Grub operates as a normal single-node crawler with zero mesh overhead.
+
 ## Live Stream
 
 Watch the crawler work in real-time. A persistent pool of warm Chromium instances streams viewport frames over WebSocket or MJPEG.
 
 **WebSocket** — connect and send interactive commands:
 ```javascript
-const ws = new WebSocket("ws://localhost:8080/stream/my-session?url=https://example.com");
+const ws = new WebSocket("ws://localhost:6792/stream/my-session?url=https://example.com");
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   if (msg.type === "frame") document.getElementById("viewport").src = "data:image/jpeg;base64," + msg.data;
@@ -230,7 +390,7 @@ ws.send(JSON.stringify({ action: "scroll", direction: "down" }));
 
 **MJPEG** — drop it in an `<img>` tag, instant video:
 ```html
-<img src="http://localhost:8080/stream/my-session/mjpeg?url=https://example.com" />
+<img src="http://localhost:6792/stream/my-session/mjpeg?url=https://example.com" />
 ```
 
 Requires `BROWSER_STREAM_ENABLED=true`. Each Chromium instance uses ~150-300MB RAM.
@@ -244,7 +404,7 @@ git clone <repo>
 cd grub-crawl
 cp .env.example .env
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+uvicorn app.main:app --reload --host 0.0.0.0 --port 6792
 ```
 
 ### Enable Agent Mode B
@@ -261,7 +421,7 @@ AGENT_PROVIDER=anthropic
 ### Submit an Agent Task
 
 ```bash
-curl -X POST http://localhost:8080/api/agent/run \
+curl -X POST http://localhost:6792/api/agent/run \
   -H "Content-Type: application/json" \
   -d '{
     "task": "Find the pricing page on example.com and extract plan details",
@@ -270,13 +430,43 @@ curl -X POST http://localhost:8080/api/agent/run \
   }'
 ```
 
+### Docker
+
+```bash
+# Single node
+./deploy.sh local            # or ./deploy.ps1 -Target local
+
+# 2-node mesh
+./deploy.sh mesh             # or ./deploy.ps1 -Target mesh
+
+# Cloud Run
+./deploy.sh cloudrun v1.0.0  # or ./deploy.ps1 -Target cloudrun -Tag v1.0.0
+
+# Cloud Run + mesh (connect to local node)
+./deploy.sh cloudrun v1.0.0 --mesh-peer http://your-ip:6792 --mesh-secret mykey
+```
+
+### Anti-Detection (Camoufox + Proxy)
+
+```bash
+# Add to .env
+BROWSER_ENGINE=camoufox
+STEALTH_ENABLED=true
+BLOCK_TRACKING_DOMAINS=true
+
+# Optional: proxy
+PROXY_SERVER=http://proxy.example.com:10001
+PROXY_USERNAME=your_username
+PROXY_PASSWORD=your_password
+```
+
 ### Ghost Protocol (anti-bot bypass)
 
 ```bash
 # Add to .env
 AGENT_GHOST_ENABLED=true
 
-curl -X POST http://localhost:8080/api/agent/ghost \
+curl -X POST http://localhost:6792/api/agent/ghost \
   -H "Content-Type: application/json" \
   -d '{"url": "https://blocked-site.com"}'
 ```
@@ -289,14 +479,14 @@ BROWSER_STREAM_ENABLED=true
 BROWSER_POOL_SIZE=2
 
 # MJPEG (open in browser)
-open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
+open "http://localhost:6792/stream/demo/mjpeg?url=https://example.com"
 ```
 
 ## Configuration
 
 ### Server
 - `HOST` (default: 0.0.0.0)
-- `PORT` (default: 8080)
+- `PORT` (default: 6792)
 - `DEBUG` (default: false)
 
 ### Storage
@@ -309,11 +499,24 @@ open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
 - `DISABLE_AUTH` (default: false)
 - `GNOSIS_AUTH_URL` (default: http://gnosis-auth:5000)
 
+### Browser Engine
+- `BROWSER_ENGINE` — chromium | camoufox (default: chromium)
+
 ### Crawling
 - `MAX_CONCURRENT_CRAWLS` (default: 5)
 - `CRAWL_TIMEOUT` (default: 30)
 - `ENABLE_JAVASCRIPT` (default: true)
 - `ENABLE_SCREENSHOTS` (default: false)
+
+### Proxy
+- `PROXY_SERVER` — proxy URL (e.g. http://proxy:10001)
+- `PROXY_USERNAME`
+- `PROXY_PASSWORD`
+- `PROXY_BYPASS` — comma-separated bypass list
+
+### Stealth
+- `STEALTH_ENABLED` (default: false) — playwright-stealth patches
+- `BLOCK_TRACKING_DOMAINS` (default: false) — block analytics/tracking requests
 
 ### Agent (Mode B)
 - `AGENT_ENABLED` (default: false)
@@ -339,6 +542,18 @@ open "http://localhost:8080/stream/demo/mjpeg?url=https://example.com"
 - `AGENT_GHOST_AUTO_TRIGGER` (default: true)
 - `AGENT_GHOST_VISION_PROVIDER` — inherits from AGENT_PROVIDER
 - `AGENT_GHOST_MAX_IMAGE_WIDTH` (default: 1280)
+
+### Mesh
+- `MESH_ENABLED` (default: false) — master switch
+- `MESH_PEERS` — comma-separated seed peer URLs
+- `MESH_NODE_NAME` — human-readable name (default: hostname)
+- `MESH_SECRET` — shared HMAC secret for inter-node auth
+- `MESH_ADVERTISE_URL` — URL peers use to reach this node
+- `MESH_PREFER_LOCAL` (default: true) — bias toward local execution
+- `MESH_HEARTBEAT_INTERVAL_S` (default: 15)
+- `MESH_PEER_TIMEOUT_S` (default: 45) — mark unhealthy after this
+- `MESH_PEER_REMOVE_S` (default: 120) — remove from peer table after this
+- `MESH_REMOTE_TIMEOUT_MS` (default: 35000) — timeout for remote tool calls
 
 ### Live Stream
 - `BROWSER_POOL_SIZE` (default: 1)
@@ -401,8 +616,25 @@ Do not summarize unless `content_quality == "sufficient"`.
 - [x] MJPEG fallback stream (W9)
 - [x] Stream status + pool status endpoints (W9)
 
-### Phase 6: Hardening
-- [ ] Comprehensive test suite
+### Phase 5.5: Anti-Detection ✅
+- [x] Camoufox anti-detect browser engine (W10)
+- [x] Per-request proxy with env fallback (W10)
+- [x] Stealth patches for Chromium (W10)
+- [x] Tracker/analytics domain blocking (W10)
+- [x] Anthropic vision format detection fix (W10)
+
+### Phase 6: Mesh Coordinator ✅
+- [x] Peer discovery with gossip (1-hop) (W11)
+- [x] HMAC-SHA256 inter-node auth (W11)
+- [x] Heartbeat loop with load metrics + seed retry (W11)
+- [x] MeshDispatcher — transparent cross-node tool routing (W12)
+- [x] Load-based scoring with locality/affinity bonus (W12)
+- [x] Deploy scripts — local, mesh, Cloud Run (W12)
+- [x] Docker Compose 2-node mesh topology (W12)
+- [x] Embedded landing page (grub-site) (W12)
+
+### Phase 7: Hardening
+- [x] Unit test suite — 176 tests across all modules
 - [ ] Error handling improvements
 - [ ] Monitoring and alerting
 - [ ] Performance optimization

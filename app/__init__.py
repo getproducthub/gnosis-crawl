@@ -1,5 +1,5 @@
 """
-Gnosis-Crawl: Pure API crawling service
+Grub Crawler: Pure API crawling service
 """
 
 __version__ = "1.0.0"

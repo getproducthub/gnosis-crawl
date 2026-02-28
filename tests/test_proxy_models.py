@@ -6,22 +6,22 @@ from app.models import ProxyConfig, CrawlOptions, GhostExtractRequest
 
 class TestProxyConfig:
     def test_validates_with_just_server(self):
-        config = ProxyConfig(server="http://gate.decodo.com:10001")
-        assert config.server == "http://gate.decodo.com:10001"
+        config = ProxyConfig(server="http://proxy.example.com:10001")
+        assert config.server == "http://proxy.example.com:10001"
         assert config.username is None
         assert config.password is None
         assert config.bypass is None
 
     def test_validates_with_all_fields(self):
         config = ProxyConfig(
-            server="http://gate.decodo.com:10001",
-            username="spwod13p0r",
-            password="19It6za6vHpFTj_bzg",
+            server="http://proxy.example.com:10001",
+            username="testuser",
+            password="testpass123",
             bypass="localhost,127.0.0.1",
         )
-        assert config.server == "http://gate.decodo.com:10001"
-        assert config.username == "spwod13p0r"
-        assert config.password == "19It6za6vHpFTj_bzg"
+        assert config.server == "http://proxy.example.com:10001"
+        assert config.username == "testuser"
+        assert config.password == "testpass123"
         assert config.bypass == "localhost,127.0.0.1"
 
 

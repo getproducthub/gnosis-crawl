@@ -1,4 +1,4 @@
-"""Tests for stealth module: apply_stealth, setup_request_interception, resolve_proxy."""
+"""Tests for stealth module: apply_stealth, setup_request_interception, and proxy resolution."""
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -81,7 +81,7 @@ class TestResolveProxy:
         mock_settings = MagicMock()
         mock_settings.get_proxy_config.return_value = None
 
-        from app.stealth import resolve_proxy
+        from app.proxy import resolve_proxy
         result = resolve_proxy(request_proxy=None, app_settings=mock_settings)
         assert result is None
 
@@ -93,7 +93,7 @@ class TestResolveProxy:
         request_proxy = MagicMock()
         request_proxy.model_dump.return_value = {"server": "http://request-proxy:9090"}
 
-        from app.stealth import resolve_proxy
+        from app.proxy import resolve_proxy
         result = resolve_proxy(request_proxy=request_proxy, app_settings=mock_settings)
         assert result == {"server": "http://request-proxy:9090"}
 
@@ -102,6 +102,6 @@ class TestResolveProxy:
         mock_settings = MagicMock()
         mock_settings.get_proxy_config.return_value = {"server": "http://env-proxy:8080"}
 
-        from app.stealth import resolve_proxy
+        from app.proxy import resolve_proxy
         result = resolve_proxy(request_proxy=None, app_settings=mock_settings)
         assert result == {"server": "http://env-proxy:8080"}

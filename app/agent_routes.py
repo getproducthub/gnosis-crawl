@@ -1,4 +1,4 @@
-"""Agent API routes for gnosis-crawl Mode B.
+"""Agent API routes for Grub Crawler Mode B.
 
 POST /api/agent/run      — submit a task to the internal agent loop
 GET  /api/agent/status/{run_id} — check status of a run (via persisted trace)
@@ -11,7 +11,7 @@ import logging
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from app.routes import get_optional_user_email
 from app.config import settings
@@ -20,6 +20,7 @@ from app.models import (
     GhostExtractRequest, GhostExtractResponse,
 )
 from app.storage import CrawlStorageService
+from app.proxy import resolve_proxy
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ def _require_agent_enabled():
 @router.post("/run", response_model=AgentRunResponse, dependencies=[Depends(_require_agent_enabled)])
 async def agent_run(
     request: AgentRunRequest,
+    raw_request: Request,
     user_email: Optional[str] = Depends(get_optional_user_email),
 ):
     """Submit a task to the internal agent loop and wait for the result."""
@@ -66,7 +68,23 @@ async def agent_run(
     # Wire engine
     registry = get_global_registry()
     provider = create_provider_from_config()
-    dispatcher = Dispatcher(registry, run_config)
+    local_dispatcher = Dispatcher(registry, run_config)
+
+    # Wrap with MeshDispatcher when mesh is active
+    coordinator = getattr(raw_request.app.state, "mesh_coordinator", None)
+    if coordinator and settings.mesh_enabled:
+        from app.mesh.dispatcher import MeshDispatcher
+        dispatcher = MeshDispatcher(
+            local_dispatcher,
+            coordinator,
+            prefer_local=settings.mesh_prefer_local,
+            customer_id=request.customer_id,
+            session_id=session_id,
+            run_id=None,  # run_id is created inside engine
+        )
+    else:
+        dispatcher = local_dispatcher
+
     tool_schemas = registry.get_schemas()
     engine = AgentEngine(provider, dispatcher, tool_schemas)
 

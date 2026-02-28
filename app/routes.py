@@ -1,5 +1,5 @@
 """
-API routes for gnosis-crawl service
+API routes for Grub Crawler service
 """
 import uuid
 import logging
@@ -21,6 +21,7 @@ from app.crawler import get_crawler_engine
 from fastapi.responses import Response
 from app.storage import CrawlStorageService
 from app.cache_store import RemoteCacheStore
+from app.proxy import resolve_proxy
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,6 @@ async def crawl_single_url(
         javascript_payload = request.javascript_payload or request.options.javascript_payload
 
         # Resolve proxy (per-request overrides env-based default)
-        from app.stealth import resolve_proxy
         proxy = resolve_proxy(getattr(request.options, 'proxy', None))
 
         result = await crawler.crawl_url(
@@ -256,7 +256,6 @@ async def crawl_markdown_only(
         javascript_payload = request.javascript_payload or request.options.javascript_payload
 
         # Resolve proxy (per-request overrides env-based default)
-        from app.stealth import resolve_proxy
         proxy = resolve_proxy(getattr(request.options, 'proxy', None))
 
         # Parse client timeout budget from X-Client-Timeout header
@@ -436,11 +435,14 @@ async def crawl_raw_html(
         javascript_enabled = request.javascript_enabled if request.javascript_enabled is not None else request.options.javascript
         javascript_payload = request.javascript_payload or request.options.javascript_payload
 
+        proxy = resolve_proxy(getattr(request.options, 'proxy', None))
+
         result = await crawler.crawl_raw_html(
             url=str(request.url),
             javascript=javascript_enabled,
             timeout=request.options.timeout,
-            javascript_payload=javascript_payload
+            javascript_payload=javascript_payload,
+            proxy=proxy
         )
 
         metadata = {
@@ -505,6 +507,9 @@ async def crawl_batch_urls(
         
         logger.info(f"Starting batch crawl for {len(url_list)} URLs (customer: {customer_identifier})")
         
+        # Resolve proxy
+        proxy = resolve_proxy(getattr(request.options, 'proxy', None))
+
         # Perform batch crawl (synchronous)
         batch_result = await crawler.batch_crawl(
             urls=url_list,
@@ -517,7 +522,8 @@ async def crawl_batch_urls(
             wait_until=request.options.wait_until,
             wait_for_selector=request.options.wait_for_selector,
             wait_after_load_ms=request.options.wait_after_load_ms,
-            retry_with_js_if_thin=request.options.retry_with_js_if_thin
+            retry_with_js_if_thin=request.options.retry_with_js_if_thin,
+            proxy=proxy
         )
 
         

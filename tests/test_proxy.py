@@ -9,17 +9,17 @@ class TestGetProxyConfig:
         """No proxy env vars => None."""
         from app.config import Settings
 
-        s = Settings(proxy_server=None)
+        s = Settings(_env_file=None, proxy_server=None)
         assert s.get_proxy_config() is None
 
     def test_returns_dict_with_just_server(self):
         """Only PROXY_SERVER set => dict with 'server' key only."""
         from app.config import Settings
 
-        s = Settings(proxy_server="http://gate.decodo.com:10001", proxy_username=None, proxy_password=None)
+        s = Settings(_env_file=None, proxy_server="http://proxy.example.com:10001", proxy_username=None, proxy_password=None)
         result = s.get_proxy_config()
         assert result is not None
-        assert result["server"] == "http://gate.decodo.com:10001"
+        assert result["server"] == "http://proxy.example.com:10001"
         assert "username" not in result
         assert "password" not in result
 
@@ -28,22 +28,24 @@ class TestGetProxyConfig:
         from app.config import Settings
 
         s = Settings(
-            proxy_server="http://gate.decodo.com:10001",
-            proxy_username="spwod13p0r",
-            proxy_password="19It6za6vHpFTj_bzg",
+            _env_file=None,
+            proxy_server="http://proxy.example.com:10001",
+            proxy_username="testuser",
+            proxy_password="testpass123",
         )
         result = s.get_proxy_config()
         assert result is not None
-        assert result["server"] == "http://gate.decodo.com:10001"
-        assert result["username"] == "spwod13p0r"
-        assert result["password"] == "19It6za6vHpFTj_bzg"
+        assert result["server"] == "http://proxy.example.com:10001"
+        assert result["username"] == "testuser"
+        assert result["password"] == "testpass123"
 
     def test_bypass_included_when_set(self):
         """Bypass field included when non-empty."""
         from app.config import Settings
 
         s = Settings(
-            proxy_server="http://gate.decodo.com:10001",
+            _env_file=None,
+            proxy_server="http://proxy.example.com:10001",
             proxy_bypass="localhost,127.0.0.1",
         )
         result = s.get_proxy_config()

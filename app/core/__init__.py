@@ -1,1 +1,1 @@
-# gnosis-crawl core modules
+# grub-crawl core modules

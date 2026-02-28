@@ -1,14 +1,14 @@
 services:
-  gnosis-crawl:
+  grub-crawl:
     build: .
-    container_name: gnosis-crawl
+    container_name: grub-crawl
     ports:
-      - "6792:8080"
+      - "6792:6792"
     env_file:
       - .env
     environment:
       - HOST=0.0.0.0
-      - PORT=8080
+      - PORT=6792
       - DEBUG=true
       - STORAGE_PATH=/app/storage
       - RUNNING_IN_CLOUD=false
@@ -21,23 +21,29 @@ services:
       - AGENT_GHOST_ENABLED=true
       - AGENT_GHOST_AUTO_TRIGGER=true
       - AGENT_GHOST_VISION_PROVIDER=anthropic
-      - BROWSER_ENGINE=camoufox
+      - BROWSER_ENGINE=chromium
       - STEALTH_ENABLED=true
       - BLOCK_TRACKING_DOMAINS=true
-      # Residential proxy — gate.decodo.com:7000 rotates IP per request.
-      # Required for Cloudflare-protected review sites (G2, Capterra, etc.)
-      - PROXY_SERVER=http://gate.decodo.com:7000
-      - PROXY_USERNAME=${PROXY_USERNAME}
-      - PROXY_PASSWORD=${PROXY_PASSWORD}
-      - PROXY_BYPASS=localhost,127.0.0.1
+      # Proxy (uncomment and configure)
+      # - PROXY_SERVER=http://proxy.example.com:10001
+      # - PROXY_USERNAME=${PROXY_USERNAME}
+      # - PROXY_PASSWORD=${PROXY_PASSWORD}
+      # - PROXY_BYPASS=localhost,127.0.0.1
+      # Mesh (uncomment to enable — see docker-compose.mesh.yml for 2-node setup)
+      # - MESH_ENABLED=true
+      # - MESH_NODE_NAME=local
+      # - MESH_ADVERTISE_URL=http://grub-crawl:6792
+      # - MESH_SECRET=changeme
+      # - MESH_PEERS=
     volumes:
       - gnosis_shared_storage:/app/storage
       - ./app:/app/app  # Mount for development hot reload
+      - ./site:/app/site  # Embedded landing page
     networks:
       - gnosis-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:6792/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -52,3 +58,5 @@ networks:
   gnosis-network:
     name: gnosis_network
     driver: bridge
+  codex-network:
+    external: true

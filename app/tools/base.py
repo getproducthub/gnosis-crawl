@@ -1,4 +1,4 @@
-"""Base tool interface for gnosis-crawl tools."""
+"""Base tool interface for Grub Crawler tools."""
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Callable, get_type_hints, AsyncGenerator

@@ -1,33 +1,7 @@
-# Gnosis-Crawl Dockerfile
-# Use official Playwright Python image like gnosis-wraith
+# Grub Crawler Dockerfile
+# Use official Playwright Python image like grub
 
 FROM mcr.microsoft.com/playwright/python:v1.54.0-jammy
-
-# Accept Porter build args (to suppress warnings, not actually used)
-ARG PORTER_APP_NAME
-ARG PORTER_CLUSTER
-ARG PORTER_DEPLOYMENT_TARGET_ID
-ARG PORTER_HOST
-ARG PORTER_PROJECT
-ARG PORTER_PR_NUMBER
-ARG PORTER_REPO_NAME
-ARG PORTER_TAG
-ARG PORTER_TOKEN
-ARG BUILDKIT_INLINE_CACHE
-
-# Accept runtime config as build args (not used, set at runtime via ENV vars)
-ARG DISABLE_AUTH
-ARG STORAGE_PATH
-ARG RUNNING_IN_CLOUD
-ARG HOST
-ARG PORT
-ARG DEBUG
-ARG MAX_CONCURRENT_CRAWLS
-ARG CRAWL_TIMEOUT
-ARG ENABLE_JAVASCRIPT
-ARG ENABLE_SCREENSHOTS
-ARG BROWSER_HEADLESS
-ARG BROWSER_TIMEOUT
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -55,10 +29,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Playwright browsers (chromium) to match the installed Python package version
 RUN playwright install --with-deps chromium
 
+# Install Patchright browser (stealth Chromium fork)
+RUN patchright install chromium || true
+
+# Fetch Camoufox browser binary
+RUN python -m camoufox fetch
+
 # Copy application code
 COPY app/ ./app/
 
-# Create storage directory and camoufox cache owned by app user
+# Copy embedded landing page (grub-site)
+COPY site/ ./site/
+
+# Create storage directory
 RUN mkdir -p storage && chown -R app:app storage
 
 # Fetch camoufox as root (needs write access to system packages for GeoLite2
@@ -71,11 +54,11 @@ RUN HOME=/home/app python -m camoufox fetch \
 USER app
 
 # Expose port
-EXPOSE 8080
+EXPOSE 6792
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:${PORT:-6792}/health || exit 1
 
-# Run application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run application — respect PORT env var (Cloud Run sets PORT=8080)
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-6792}

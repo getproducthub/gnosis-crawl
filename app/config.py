@@ -1,5 +1,5 @@
 """
-Configuration management for gnosis-crawl
+Configuration management for Grub Crawler
 Environment-based configuration following gnosis-ocr pattern
 """
 import os
@@ -10,32 +10,32 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """Application settings from environment variables"""
-    
+
     # Server Configuration
     host: str = "0.0.0.0"
-    port: int = 8080
+    port: int = 6792
     debug: bool = False
-    
+
     # Storage Configuration
     storage_path: str = "./storage"
     running_in_cloud: bool = False
     gcs_bucket_name: Optional[str] = None
-    
+
     # Authentication
     disable_auth: bool = False
     gnosis_auth_url: str = "http://gnosis-auth:5000"
-    
+
     # Crawling Configuration
     max_concurrent_crawls: int = 5
     crawl_timeout: int = 30
     enable_javascript: bool = True
     enable_screenshots: bool = False
-    
+
     # Browser Configuration
-    browser_engine: str = "camoufox"  # "chromium" or "camoufox"
+    browser_engine: str = "chromium"  # "chromium" or "camoufox"
     browser_headless: bool = True
     browser_timeout: int = 30000
-    
+
     # Cloud Configuration
     google_cloud_project: Optional[str] = None
     cloud_tasks_queue: str = "crawl-jobs"
@@ -94,11 +94,23 @@ class Settings(BaseSettings):
     http_precheck_timeout: int = 15
     http_precheck_impersonate: str = "chrome135"
 
+    # Mesh Coordinator Configuration
+    mesh_enabled: bool = False
+    mesh_peers: str = ""  # comma-separated seed peer URLs
+    mesh_node_name: str = ""  # human-readable; defaults to hostname
+    mesh_secret: str = ""  # shared HMAC secret for inter-node auth
+    mesh_heartbeat_interval_s: float = 15.0
+    mesh_peer_timeout_s: float = 45.0
+    mesh_peer_remove_s: float = 120.0
+    mesh_prefer_local: bool = True  # bias toward local execution
+    mesh_remote_timeout_ms: int = 35_000
+    mesh_advertise_url: str = ""  # URL peers use to reach this node
+
     class Config:
         env_file = ".env"
         case_sensitive = False
         extra = "ignore"
-        
+
         # Map environment variable names
         fields = {
             'running_in_cloud': {'env': 'RUNNING_IN_CLOUD'},
@@ -129,6 +141,12 @@ class Settings(BaseSettings):
         if not self.agent_allowed_domains:
             return []
         return [d.strip() for d in self.agent_allowed_domains.split(",") if d.strip()]
+
+    def get_mesh_peers(self) -> list[str]:
+        """Parse comma-separated mesh seed peer URLs."""
+        if not self.mesh_peers:
+            return []
+        return [p.strip() for p in self.mesh_peers.split(",") if p.strip()]
 
     def get_proxy_config(self) -> Optional[dict]:
         """Return Playwright-compatible proxy dict or None."""

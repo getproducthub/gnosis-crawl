@@ -1,5 +1,5 @@
 """
-Job management system with cloud/local abstraction for gnosis-crawl
+Job management system with cloud/local abstraction for Grub Crawler
 Adapted from gnosis-ocr job system
 """
 import os

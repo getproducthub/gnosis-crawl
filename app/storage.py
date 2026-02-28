@@ -1,5 +1,5 @@
 """
-Storage service for gnosis-crawl
+Storage service for Grub Crawler
 Based on gnosis-ocr storage service with crawl-specific adaptations
 """
 import os
@@ -34,7 +34,7 @@ class CrawlStorageService:
         Args:
             user_email: User email for partitioning (defaults to anonymous)
         """
-        self._user_email = user_email or "anonymous@gnosis-crawl.local"
+        self._user_email = user_email or "anonymous@grub-crawl.local"
         self._user_hash = self._compute_user_hash(self._user_email)
         self._is_cloud = settings.is_cloud_environment()
         

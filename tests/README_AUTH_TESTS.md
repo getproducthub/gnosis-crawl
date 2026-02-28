@@ -6,19 +6,19 @@ Tests work **with or without** auth tokens configured. If no token is set, auth 
 
 ### Run Local Tests (no setup needed)
 ```bash
-cd gnosis-crawl
+cd grub-crawl
 pytest tests/test_auth_local.py -v
 ```
 
 ### Run Remote Tests (optional credentials)
 ```bash
 # Option 1: With auth token (tests full auth flow)
-export WRAITH_API_URL="https://wraith.nuts.services"
-export WRAITH_AUTH_TOKEN="your-token-here"
+export GRUB_API_URL="https://grub.nuts.services"
+export GRUB_AUTH_TOKEN="your-token-here"
 pytest tests/test_auth_remote.py -v
 
 # Option 2: Without auth token (tests pass through when auth disabled)
-export WRAITH_API_URL="https://wraith.nuts.services"
+export GRUB_API_URL="https://grub.nuts.services"
 pytest tests/test_auth_remote.py -v
 ```
 
@@ -52,12 +52,12 @@ Tests against actual remote API endpoint (works with or without credentials).
 **Setup:**
 ```bash
 # Option 1: Test with auth enabled (requires token)
-export WRAITH_API_URL="https://wraith.nuts.services"
-export WRAITH_AUTH_TOKEN="your-token-here"
+export GRUB_API_URL="https://grub.nuts.services"
+export GRUB_AUTH_TOKEN="your-token-here"
 
 # Option 2: Test with auth disabled (no token needed)
-export WRAITH_API_URL="https://wraith.nuts.services"
-# Don't set WRAITH_AUTH_TOKEN - tests will pass assuming auth is disabled
+export GRUB_API_URL="https://grub.nuts.services"
+# Don't set GRUB_AUTH_TOKEN - tests will pass assuming auth is disabled
 ```
 
 **Run:**
@@ -66,7 +66,7 @@ pytest tests/test_auth_remote.py -v
 ```
 
 **Auto-skip behavior:**
-Tests will automatically skip if `WRAITH_API_URL` is not set. If URL is set but token is not, tests assume auth is disabled on the server.
+Tests will automatically skip if `GRUB_API_URL` is not set. If URL is set but token is not, tests assume auth is disabled on the server.
 
 ## Run All Tests
 ```bash
@@ -92,9 +92,9 @@ For CI/CD pipelines:
   run: pytest tests/test_auth_local.py -v
 
 - name: Run remote auth tests
-  if: env.WRAITH_AUTH_TOKEN != ''
+  if: env.GRUB_AUTH_TOKEN != ''
   env:
-    WRAITH_API_URL: https://wraith.nuts.services
-    WRAITH_AUTH_TOKEN: ${{ secrets.WRAITH_AUTH_TOKEN }}
+    GRUB_API_URL: https://grub.nuts.services
+    GRUB_AUTH_TOKEN: ${{ secrets.GRUB_AUTH_TOKEN }}
   run: pytest tests/test_auth_remote.py -v
 ```
