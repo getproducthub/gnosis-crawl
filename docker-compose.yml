@@ -13,9 +13,9 @@ services:
       - STORAGE_PATH=/app/storage
       - RUNNING_IN_CLOUD=false
       - DISABLE_AUTH=true
-      - MAX_CONCURRENT_CRAWLS=3
-      - CRAWL_TIMEOUT=60
-      - BROWSER_TIMEOUT=60000
+      - MAX_CONCURRENT_CRAWLS=8
+      - CRAWL_TIMEOUT=120
+      - BROWSER_TIMEOUT=90000
       - ENABLE_JAVASCRIPT=true
       - ENABLE_SCREENSHOTS=true
       - AGENT_GHOST_ENABLED=true
