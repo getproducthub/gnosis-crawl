@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     gnosis_auth_url: str = "http://gnosis-auth:5000"
 
     # Crawling Configuration
-    max_concurrent_crawls: int = 5
+    max_concurrent_crawls: int = 3
     crawl_timeout: int = 30
     enable_javascript: bool = True
     enable_screenshots: bool = False

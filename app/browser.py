@@ -362,12 +362,53 @@ class BrowserEngine:
                 await self.close()
                 raise
     
-    async def create_isolated_context(self, javascript_enabled: bool = True, proxy=None, domain: str = None, proxy_server: str = None) -> tuple[BrowserContext, Page]:
-        """Create a new isolated browser context and page for concurrent operations."""
-        if not self.browser:
-            logger.info("Browser not started, initializing")
+    async def _ensure_browser_alive(self, javascript_enabled: bool = True) -> None:
+        """Ensure the browser process is alive, restarting if it crashed or disconnected."""
+        if not self.browser or not self.browser.is_connected():
+            if self.browser:
+                logger.warning("Browser process died (is_connected=False), restarting")
+            else:
+                logger.info("Browser not started, initializing")
+            await self.close()
             await self.start_browser(javascript_enabled=javascript_enabled)
 
+    async def create_isolated_context(self, javascript_enabled: bool = True, proxy=None, domain: str = None, proxy_server: str = None) -> tuple[BrowserContext, Page]:
+        """Create a new isolated browser context and page for concurrent operations.
+
+        If the browser process has crashed (TargetClosedError), automatically
+        restart it and retry once before propagating the error.
+        """
+        from playwright._impl._errors import TargetClosedError
+
+        max_crash_retries = 3
+        for attempt in range(max_crash_retries + 1):
+            await self._ensure_browser_alive(javascript_enabled=javascript_enabled)
+
+            try:
+                return await self._create_context_inner(
+                    javascript_enabled=javascript_enabled,
+                    proxy=proxy,
+                    domain=domain,
+                    proxy_server=proxy_server,
+                )
+            except TargetClosedError:
+                if attempt < max_crash_retries:
+                    backoff = (attempt + 1) * 2  # 2s, 4s, 6s
+                    logger.warning(
+                        f"Browser died during context creation (TargetClosedError), "
+                        f"restart attempt {attempt + 1}/{max_crash_retries}, "
+                        f"waiting {backoff}s before retry"
+                    )
+                    await self.close()
+                    await asyncio.sleep(backoff)
+                    continue
+                logger.error(f"Browser crashed {max_crash_retries} times, giving up")
+                raise
+
+        raise RuntimeError("Failed to create browser context after retries")
+
+    async def _create_context_inner(self, javascript_enabled: bool = True, proxy=None, domain: str = None, proxy_server: str = None) -> tuple[BrowserContext, Page]:
+        """Inner context creation — separated so create_isolated_context can retry on crash."""
         from app.stealth import apply_stealth, setup_request_interception, apply_chromium_js_patches
 
         if settings.browser_engine == "camoufox":
