@@ -418,9 +418,24 @@ async def solve_managed_challenge_capsolver(
 
     start_ms = int(asyncio.get_event_loop().time() * 1000)
 
+    # Capture challenge page HTML and browser UA to pass to CapSolver.
+    # This dramatically improves solve rates — CapSolver can parse the
+    # challenge script locally instead of fetching through the proxy.
+    challenge_html = None
+    browser_ua = None
+    try:
+        challenge_html = await page.content()
+        # Truncate to 500KB to avoid oversized payloads
+        if challenge_html and len(challenge_html) > 500_000:
+            challenge_html = challenge_html[:500_000]
+        browser_ua = await page.evaluate("() => navigator.userAgent")
+    except Exception as e:
+        logger.debug(f"Could not capture challenge HTML/UA: {e}")
+
     try:
         token_or_cookies = await _call_capsolver_managed(
-            key, site_url, proxy_str, timeout_ms
+            key, site_url, proxy_str, timeout_ms,
+            html=challenge_html, user_agent=browser_ua,
         )
         if not token_or_cookies:
             elapsed = int(asyncio.get_event_loop().time() * 1000) - start_ms
@@ -739,13 +754,15 @@ async def _extract_turnstile_sitekey(page) -> Optional[str]:
     # Method 3: Extract from Turnstile script URL path
     # Cloudflare Managed Challenges embed the sitekey in the script src:
     # https://challenges.cloudflare.com/turnstile/v0/g/{sitekey}/api.js
+    # Valid sitekeys start with "0x4" and are 20+ chars. Short hex fragments
+    # (e.g. Ray IDs like "b0a7532ac8ec") must be rejected.
     try:
         script_sitekey = await page.evaluate("""() => {
             const scripts = document.querySelectorAll('script[src*="challenges.cloudflare.com/turnstile"]');
             for (const s of scripts) {
                 const src = s.getAttribute('src') || '';
                 const match = src.match(/\\/turnstile\\/v0\\/(?:g|i)\\/([0-9a-fA-Fx-]+)\\/api\\.js/);
-                if (match) return match[1];
+                if (match && match[1].length >= 20) return match[1];
             }
             return null;
         }""")
@@ -759,14 +776,14 @@ async def _extract_turnstile_sitekey(page) -> Optional[str]:
     try:
         import re
         html = await page.content()
-        # Pattern: /turnstile/v0/g/{sitekey}/api.js
-        match = re.search(r'/turnstile/v0/(?:g|i)/([0-9a-fA-Fx-]+)/api\.js', html)
+        # Pattern: /turnstile/v0/g/{sitekey}/api.js — must be 20+ chars
+        match = re.search(r'/turnstile/v0/(?:g|i)/([0-9a-fA-Fx-]{20,})/api\.js', html)
         if match:
             key = match.group(1)
             logger.info(f"Turnstile sitekey from HTML regex: {key}")
             return key
-        # Pattern: data-sitekey="..." anywhere in HTML
-        match = re.search(r'data-sitekey=["\']([^"\']+)', html)
+        # Pattern: data-sitekey="..." — valid keys start with 0x4 or are 20+ chars
+        match = re.search(r'data-sitekey=["\']([^"\']{20,})', html)
         if match:
             key = match.group(1)
             logger.info(f"Turnstile sitekey from HTML data-sitekey: {key}")
@@ -947,6 +964,8 @@ async def _call_capsolver_managed(
     site_url: str,
     proxy_str: str,
     timeout_ms: int,
+    html: Optional[str] = None,
+    user_agent: Optional[str] = None,
 ) -> Optional[dict]:
     """
     Call CapSolver API with AntiCloudflareTask for Managed Challenges.
@@ -958,13 +977,21 @@ async def _call_capsolver_managed(
     create_url = "https://api.capsolver.com/createTask"
     result_url = "https://api.capsolver.com/getTaskResult"
 
+    task_obj: dict = {
+        "type": "AntiCloudflareTask",
+        "websiteURL": site_url,
+        "proxy": proxy_str,
+    }
+    # Pass the challenge page HTML so CapSolver doesn't need to fetch it
+    if html:
+        task_obj["html"] = html
+    # Match the browser UA so cf_clearance cookie will be valid
+    if user_agent:
+        task_obj["userAgent"] = user_agent
+
     payload = {
         "clientKey": api_key,
-        "task": {
-            "type": "AntiCloudflareTask",
-            "websiteURL": site_url,
-            "proxy": proxy_str,
-        },
+        "task": task_obj,
     }
 
     try:
@@ -976,10 +1003,14 @@ async def _call_capsolver_managed(
             ) as resp:
                 data = await resp.json()
                 if data.get("errorId", 1) != 0:
+                    error_code = data.get("errorCode", "unknown")
+                    error_desc = data.get("errorDescription", "no description")
                     logger.warning(
                         f"CapSolver AntiCloudflareTask create error: "
-                        f"{data.get('errorDescription')}"
+                        f"code={error_code}, desc={error_desc}"
                     )
+                    if error_code == "ERROR_PROXY_BANNED":
+                        logger.warning("Proxy IP is banned by target — consider rotating proxy")
                     return None
                 task_id = data.get("taskId")
                 if not task_id:
@@ -1005,10 +1036,14 @@ async def _call_capsolver_managed(
                         )
                         return solution
                     if status == "failed":
+                        error_code = data.get("errorCode", "unknown")
+                        error_desc = data.get("errorDescription", "no description")
                         logger.warning(
                             f"AntiCloudflareTask failed: "
-                            f"{data.get('errorDescription')}"
+                            f"code={error_code}, desc={error_desc}"
                         )
+                        if error_code in ("ERROR_PROXY_BANNED", "ERROR_CAPTCHA_UNSOLVABLE"):
+                            logger.warning(f"CapSolver hint: {error_code} — proxy may be burned for this domain")
                         return None
 
             logger.warning(f"AntiCloudflareTask timeout after {timeout_ms}ms")
