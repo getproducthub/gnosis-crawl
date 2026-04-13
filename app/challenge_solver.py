@@ -144,7 +144,13 @@ async def detect_challenge(page) -> ChallengeDetection:
             ]
             matched_signals = [s for s in cf_signals if s in content_lower]
             if len(matched_signals) >= 2:
-                logger.info(f"Challenge detected via content heuristic: {matched_signals}")
+                # Throttle: log INFO the first time, DEBUG on subsequent polls.
+                # This prevents 30+ identical log lines during the auto-wait loop.
+                if not getattr(detect_challenge, '_heuristic_logged', False):
+                    logger.info(f"Challenge detected via content heuristic: {matched_signals}")
+                    detect_challenge._heuristic_logged = True
+                else:
+                    logger.debug(f"Challenge still detected via content heuristic: {matched_signals}")
                 return ChallengeDetection(
                     detected=True,
                     challenge_type=ChallengeType.MANAGED,
@@ -190,6 +196,9 @@ async def wait_for_challenge_resolution(
     keywords in HTML — these keywords remain even after verification succeeds.
     So we must also check #challenge-success selector and body text.
     """
+    # Reset the content heuristic log throttle for this polling session
+    detect_challenge._heuristic_logged = False
+
     detection = await detect_challenge(page)
     if not detection.detected:
         return ChallengeResult(resolved=True, method="none", wait_time_ms=0)
@@ -432,10 +441,14 @@ async def solve_managed_challenge_capsolver(
     except Exception as e:
         logger.debug(f"Could not capture challenge HTML/UA: {e}")
 
+    # CapSolver AntiCloudflareTask only accepts Chrome-on-Windows UAs.
+    # Coerce the browser UA to Windows while preserving the Chrome version.
+    capsolver_ua = _coerce_windows_chrome_ua(browser_ua)
+
     try:
         token_or_cookies = await _call_capsolver_managed(
             key, site_url, proxy_str, timeout_ms,
-            html=challenge_html, user_agent=browser_ua,
+            html=challenge_html, user_agent=capsolver_ua,
         )
         if not token_or_cookies:
             elapsed = int(asyncio.get_event_loop().time() * 1000) - start_ms
@@ -597,6 +610,9 @@ async def resolve_challenge(
     4. Try AntiCloudflareTask (managed challenges, needs proxy)
     5. Try AntiTurnstileTaskProxyLess (standalone Turnstile, needs sitekey)
     """
+    # Reset the content heuristic log throttle for this new resolution attempt
+    detect_challenge._heuristic_logged = False
+
     detection = await detect_challenge(page)
     if not detection.detected:
         return ChallengeResult(resolved=True, method="none", wait_time_ms=0)
@@ -739,9 +755,17 @@ async def _extract_turnstile_sitekey(page) -> Optional[str]:
                     if (key) return key;
                 }
             }
-            // Check for sitekey in any cf_chl_opt object
-            if (window._cf_chl_opt && window._cf_chl_opt.cK) {
-                return window._cf_chl_opt.cK;
+            // Check for sitekey in _cf_chl_opt — Cloudflare rotates field names.
+            // Known fields: cK (common), cRq (managed challenges), cvId, cZone.
+            if (window._cf_chl_opt) {
+                var opt = window._cf_chl_opt;
+                if (opt.cK) return opt.cK;
+                if (opt.cRq && opt.cRq.length >= 20) return opt.cRq;
+                if (opt.cvId && opt.cvId.length >= 20) return opt.cvId;
+            }
+            // Check for cfTurnstileWidget global (newer Cloudflare versions)
+            if (window.__cfTurnstileWidget && window.__cfTurnstileWidget.sitekey) {
+                return window.__cfTurnstileWidget.sitekey;
             }
             return null;
         }""")
@@ -934,6 +958,37 @@ async def _click_turnstile_checkbox(page) -> bool:
     except Exception as e:
         logger.debug(f"Turnstile checkbox click failed: {e}")
         return False
+
+
+def _coerce_windows_chrome_ua(ua: Optional[str]) -> Optional[str]:
+    """Coerce a Chrome UA string to Windows while preserving the Chrome version.
+
+    CapSolver's AntiCloudflareTask only accepts Chrome UAs on Windows.
+    The browser may be fingerprinted as macOS or Linux for stealth, so we
+    rewrite the OS portion for the CapSolver API call only.  The browsing
+    context keeps its original UA — only the value sent to CapSolver changes.
+
+    Returns None if input is None or not a recognisable Chrome UA.
+    """
+    if not ua or "Chrome/" not in ua:
+        return ua
+
+    import re
+    # Already Windows — nothing to do
+    if "Windows NT" in ua:
+        return ua
+
+    # Extract Chrome version from UA
+    chrome_match = re.search(r'Chrome/([\d.]+)', ua)
+    if not chrome_match:
+        return ua
+
+    chrome_version = chrome_match.group(1)
+    return (
+        f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        f"AppleWebKit/537.36 (KHTML, like Gecko) "
+        f"Chrome/{chrome_version} Safari/537.36"
+    )
 
 
 def _format_proxy_for_capsolver(proxy_config: Optional[dict]) -> Optional[str]:

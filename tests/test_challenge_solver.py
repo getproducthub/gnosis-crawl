@@ -20,6 +20,7 @@ from app.challenge_solver import (
     _extract_turnstile_sitekey,
     _click_turnstile_checkbox,
     _format_proxy_for_capsolver,
+    _coerce_windows_chrome_ua,
 )
 
 
@@ -712,10 +713,11 @@ class TestSolveManagedChallengeCapsolver:
 
         captured_args = {}
 
-        async def mock_call_managed(api_key, site_url, proxy_str, timeout_ms):
+        async def mock_call_managed(api_key, site_url, proxy_str, timeout_ms, html=None, user_agent=None):
             captured_args["api_key"] = api_key
             captured_args["proxy_str"] = proxy_str
             captured_args["site_url"] = site_url
+            captured_args["user_agent"] = user_agent
             return None  # Failure
 
         with patch("app.challenge_solver._call_capsolver_managed", mock_call_managed):
@@ -741,7 +743,7 @@ class TestSolveManagedChallengeCapsolver:
         page.context.add_cookies = AsyncMock()
         page.reload = AsyncMock()
 
-        async def mock_call_managed(api_key, site_url, proxy_str, timeout_ms):
+        async def mock_call_managed(api_key, site_url, proxy_str, timeout_ms, html=None, user_agent=None):
             return {
                 "cookies": {"cf_clearance": "abc123"},
                 "userAgent": "Mozilla/5.0 ...",
@@ -856,3 +858,171 @@ class TestResolveChallengeWithClickAndManaged:
             )
 
         assert received_proxy == proxy
+
+
+# --- Bug fixes: UA, auto-wait, sitekey extraction ---
+
+
+class TestContentHeuristicLogThrottling:
+    """Bug fix: detect_challenge content heuristic should only log once, not every poll."""
+
+    @pytest.mark.asyncio
+    async def test_content_heuristic_logs_once_per_detection(self, caplog):
+        """The content heuristic log should not spam on every poll iteration."""
+        import logging
+
+        page = make_page(title="Normal Page")
+        # Content with 2+ CF signals triggers content heuristic
+        cf_html = '<html><body>cloudflare turnstile challenge-platform</body></html>'
+        page.content = AsyncMock(return_value=cf_html)
+
+        with caplog.at_level(logging.INFO, logger="app.challenge_solver"):
+            result = await detect_challenge(page)
+
+        assert result.detected is True
+        assert result.challenge_type == ChallengeType.MANAGED
+        # The log line should exist
+        heuristic_logs = [r for r in caplog.records if "content heuristic" in r.message]
+        assert len(heuristic_logs) == 1
+
+    @pytest.mark.asyncio
+    async def test_polling_loop_does_not_spam_content_heuristic_log(self, caplog):
+        """wait_for_challenge_resolution should not log 'content heuristic' on every poll."""
+        import logging
+
+        page = make_page(title="Normal Page")
+        # Content heuristic fires every poll — this is the bug
+        cf_html = '<html><body>cloudflare turnstile challenge-platform cf_chl_opt</body></html>'
+        page.content = AsyncMock(return_value=cf_html)
+
+        with caplog.at_level(logging.INFO, logger="app.challenge_solver"):
+            result = await wait_for_challenge_resolution(
+                page, timeout_ms=1500, poll_interval_ms=100,
+            )
+
+        assert result.resolved is False
+        heuristic_logs = [r for r in caplog.records if "content heuristic" in r.message]
+        # Should log at most 2-3 times (first detection + maybe one more), not 15+
+        assert len(heuristic_logs) <= 3, (
+            f"Content heuristic logged {len(heuristic_logs)} times during polling — should be throttled"
+        )
+
+
+class TestCapsoverWindowsOnlyUA:
+    """Bug fix: CapSolver AntiCloudflareTask only accepts Chrome-on-Windows UAs."""
+
+    @pytest.mark.asyncio
+    async def test_capsolver_receives_windows_ua(self, monkeypatch):
+        """The UA sent to _call_capsolver_managed must be a Windows Chrome UA,
+        even if the browser is running a macOS or Linux UA."""
+        monkeypatch.setenv("CAPSOLVER_API_KEY", "test-key")
+        proxy = {
+            "server": "http://gate.decodo.com:7777",
+            "username": "user-abc",
+            "password": "pass",
+        }
+        page = make_page(title="Just a moment...")
+        page.context = AsyncMock()
+        page.context.add_cookies = AsyncMock()
+        # Simulate browser reporting a macOS Chrome UA
+        page.evaluate = AsyncMock(return_value="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6944.85 Safari/537.36")
+        page.content = AsyncMock(return_value="<html>cloudflare challenge</html>")
+
+        captured_ua = {}
+
+        async def mock_call_managed(api_key, site_url, proxy_str, timeout_ms, html=None, user_agent=None):
+            captured_ua["ua"] = user_agent
+            return None  # Failure is fine, we're testing UA
+
+        with patch("app.challenge_solver._call_capsolver_managed", mock_call_managed):
+            await solve_managed_challenge_capsolver(
+                page, "https://example.com", proxy_config=proxy, timeout_ms=5000,
+            )
+
+        ua = captured_ua.get("ua", "")
+        assert "Windows NT" in ua, f"UA sent to CapSolver must be Windows, got: {ua}"
+        assert "Chrome/" in ua, f"UA sent to CapSolver must be Chrome, got: {ua}"
+
+
+class TestSitekeyExtractionCfChlOpt:
+    """Bug fix: sitekey extraction should check additional _cf_chl_opt fields."""
+
+    @pytest.mark.asyncio
+    async def test_extracts_sitekey_from_cf_chl_opt_cRq(self):
+        """_cf_chl_opt.cRq should be checked when cK is not present."""
+        page = AsyncMock()
+        page.query_selector = AsyncMock(return_value=None)
+
+        eval_calls = []
+
+        async def js_eval(script):
+            eval_calls.append(script)
+            # First JS call (Method 2): check _cf_chl_opt
+            if "_cf_chl_opt" in script and "cRq" in script:
+                return "0x4AAAAAAAAAaaaaaaBBBBBB"
+            return None
+
+        page.evaluate = AsyncMock(side_effect=js_eval)
+        page.content = AsyncMock(return_value="<html>no sitekey here</html>")
+
+        result = await _extract_turnstile_sitekey(page)
+        assert result == "0x4AAAAAAAAAaaaaaaBBBBBB"
+
+    @pytest.mark.asyncio
+    async def test_extracts_sitekey_from_cf_chl_opt_cK(self):
+        """_cf_chl_opt.cK (existing behavior) still works."""
+        page = AsyncMock()
+        page.query_selector = AsyncMock(return_value=None)
+
+        async def js_eval(script):
+            if "_cf_chl_opt" in script:
+                return "0x4CCCCCCCCCCCCCCCCCCCC"
+            return None
+
+        page.evaluate = AsyncMock(side_effect=js_eval)
+        page.content = AsyncMock(return_value="<html>no sitekey</html>")
+
+        result = await _extract_turnstile_sitekey(page)
+        assert result == "0x4CCCCCCCCCCCCCCCCCCCC"
+
+
+class TestCoerceWindowsChromeUA:
+    """Bug fix: _coerce_windows_chrome_ua rewrites non-Windows UAs for CapSolver."""
+
+    def test_coerces_macos_ua_to_windows(self):
+        mac_ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6944.85 Safari/537.36"
+        result = _coerce_windows_chrome_ua(mac_ua)
+        assert "Windows NT 10.0" in result
+        assert "Chrome/134.0.6944.85" in result
+
+    def test_coerces_linux_ua_to_windows(self):
+        linux_ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.6972.61 Safari/537.36"
+        result = _coerce_windows_chrome_ua(linux_ua)
+        assert "Windows NT 10.0" in result
+        assert "Chrome/135.0.6972.61" in result
+
+    def test_preserves_windows_ua_unchanged(self):
+        win_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.6917.92 Safari/537.36"
+        result = _coerce_windows_chrome_ua(win_ua)
+        assert result == win_ua
+
+    def test_returns_none_for_none(self):
+        assert _coerce_windows_chrome_ua(None) is None
+
+    def test_passes_through_non_chrome_ua(self):
+        ff_ua = "Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0"
+        result = _coerce_windows_chrome_ua(ff_ua)
+        assert result == ff_ua  # No Chrome/ found, return as-is
+
+    def test_browser_ua_stays_diverse(self):
+        """Browser's _get_random_user_agent should still include non-Windows UAs."""
+        from app.browser import BrowserEngine
+        engine = BrowserEngine.__new__(BrowserEngine)
+        uas = set()
+        for _ in range(100):
+            uas.add(engine._get_random_user_agent())
+        # Should have diversity — at least some non-Windows UAs
+        has_non_windows = any("Windows" not in ua for ua in uas)
+        has_windows = any("Windows" in ua for ua in uas)
+        assert has_windows, "Should include Windows UAs"
+        assert has_non_windows, "Should include non-Windows UAs for stealth diversity"
