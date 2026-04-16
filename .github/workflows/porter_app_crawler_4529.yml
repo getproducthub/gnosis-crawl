@@ -14,6 +14,10 @@ jobs:
               run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
             - name: Setup porter
               uses: porter-dev/setup-porter@v0.1.0
+            - name: Authenticate Porter CLI
+              run: porter auth login --token ${{ secrets.PORTER_APP_12152_4529 }}
+              env:
+                PORTER_HOST: https://dashboard.porter.run
             - name: Deploy stack
               timeout-minutes: 30
               run: exec porter apply
