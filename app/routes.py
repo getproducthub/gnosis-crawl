@@ -7,6 +7,8 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Header
 from datetime import datetime
 
+from fastapi.responses import JSONResponse
+
 from app.models import (
     CrawlRequest, CrawlResult,
     MarkdownRequest, MarkdownResult,
@@ -18,6 +20,7 @@ from app.models import (
 from app.auth import get_current_user, get_user_email, get_customer_identifier
 from app.config import settings
 from app.crawler import get_crawler_engine
+from app.exceptions import QueueOverflowError
 from fastapi.responses import Response
 from app.storage import CrawlStorageService
 from app.cache_store import RemoteCacheStore
@@ -220,6 +223,12 @@ async def crawl_single_url(
                 }
             )
         
+    except QueueOverflowError as e:
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Too many requests", "detail": str(e)},
+            headers={"Retry-After": "30"},
+        )
     except Exception as e:
         logger.error(f"Failed to crawl {request.url}: {e}", exc_info=True)
         return CrawlResult(
@@ -408,6 +417,12 @@ async def crawl_markdown_only(
             error=None if all_success else "One or more URLs failed"
         )
         
+    except QueueOverflowError as e:
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Too many requests", "detail": str(e)},
+            headers={"Retry-After": "30"},
+        )
     except Exception as e:
         logger.error(f"Failed to crawl markdown for {request.url}: {e}", exc_info=True)
         return MarkdownResult(
@@ -469,6 +484,12 @@ async def crawl_raw_html(
                 metadata=metadata,
                 crawled_at=datetime.utcnow()
             )
+    except QueueOverflowError as e:
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Too many requests", "detail": str(e)},
+            headers={"Retry-After": "30"},
+        )
     except Exception as e:
         logger.error(f"Failed to fetch raw HTML for {request.url}: {e}", exc_info=True)
         return RawHtmlResult(
@@ -536,6 +557,12 @@ async def crawl_batch_urls(
             summary=batch_result["summary"]
         )
         
+    except QueueOverflowError as e:
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Too many requests", "detail": str(e)},
+            headers={"Retry-After": "30"},
+        )
     except Exception as e:
         logger.error(f"Failed to execute batch crawl: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

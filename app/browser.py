@@ -23,6 +23,7 @@ from io import BytesIO
 
 from app.config import settings
 from app.stealth import apply_chromium_js_patches
+from app.exceptions import QueueOverflowError
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +254,10 @@ class BrowserEngine:
         self._browser_lock = asyncio.Lock()
         self._camoufox_cm = None
         self._context_semaphore = asyncio.Semaphore(settings.max_concurrent_crawls)
+        # Backpressure: track how many requests are waiting for a semaphore slot.
+        # If this exceeds the limit, new requests are rejected with 429.
+        self._semaphore_waiters = 0
+        self._max_crawl_queue_depth = int(os.environ.get('MAX_CRAWL_QUEUE_DEPTH', '20'))
         # Serialize context creation for Camoufox + residential proxy:
         # concurrent proxy auth handshakes cause HTTP 407 rejections.
         self._context_create_lock = asyncio.Lock()
@@ -267,6 +272,26 @@ class BrowserEngine:
         # Store the proxy config for CapSolver AntiCloudflareTask (needs proxy details).
         self._proxy_config: Optional[dict] = None
         
+    async def acquire_with_backpressure(self):
+        """Acquire a semaphore slot, rejecting if queue depth exceeds limit.
+
+        Raises QueueOverflowError immediately if too many requests are
+        already waiting, allowing the route handler to return HTTP 429
+        instead of letting requests pile up and timeout.
+        """
+        if self._semaphore_waiters >= self._max_crawl_queue_depth:
+            raise QueueOverflowError(
+                f"Crawl queue depth ({self._semaphore_waiters}) "
+                f"exceeds limit ({self._max_crawl_queue_depth})"
+            )
+        self._semaphore_waiters += 1
+        try:
+            await self._context_semaphore.acquire()
+        except BaseException:
+            self._semaphore_waiters -= 1
+            raise
+        self._semaphore_waiters -= 1
+
     async def start_browser(self, javascript_enabled: bool = True) -> None:
         """Start browser with enhanced configuration and anti-detection."""
         async with self._browser_lock:
@@ -528,8 +553,12 @@ class BrowserEngine:
         # Compute client deadline if X-Client-Timeout was provided
         deadline = (_time.monotonic() + client_timeout_seconds) if client_timeout_seconds else None
 
+        # Backpressure check: reject early if too many requests are queued
+        # (raises QueueOverflowError → caller returns HTTP 429)
+        await self.acquire_with_backpressure()
+
         async with domain_lock:
-            async with self._context_semaphore:
+            try:
                 # Serialize context creation to avoid concurrent proxy auth
                 # handshakes — residential proxies reject simultaneous 407 handshakes.
                 async with self._context_create_lock:
@@ -851,6 +880,9 @@ class BrowserEngine:
                             await ctx.close()
                         except Exception as e:
                             logger.warning(f"Error closing context: {e}")
+            finally:
+                # Release the semaphore slot acquired by acquire_with_backpressure()
+                self._context_semaphore.release()
 
     async def navigate(self, url: str, javascript_enabled: bool = True, timeout: int = 30000) -> None:
         """Navigate to URL with enhanced error handling and retry logic."""
