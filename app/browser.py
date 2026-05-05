@@ -271,6 +271,14 @@ class BrowserEngine:
         self._max_failures_before_restart = settings.proxy_restart_after_failures
         # Store the proxy config for CapSolver AntiCloudflareTask (needs proxy details).
         self._proxy_config: Optional[dict] = None
+        # Idle timeout: kill browser after N seconds of inactivity to free memory.
+        # Camoufox/Chromium accumulates V8 heap memory across contexts and never releases it.
+        self._idle_timeout_seconds = int(os.environ.get('BROWSER_IDLE_TIMEOUT', '120'))
+        self._idle_timer: Optional[asyncio.TimerHandle] = None
+        self._last_activity: float = 0.0
+        # Force restart after N crawls to prevent unbounded memory growth.
+        self._crawl_count = 0
+        self._max_crawls_before_restart = int(os.environ.get('BROWSER_MAX_CRAWLS', '50'))
         
     async def acquire_with_backpressure(self):
         """Acquire a semaphore slot, rejecting if queue depth exceeds limit.
@@ -294,6 +302,10 @@ class BrowserEngine:
 
     async def start_browser(self, javascript_enabled: bool = True) -> None:
         """Start browser with enhanced configuration and anti-detection."""
+        # Cancel any pending idle shutdown — a crawl is starting
+        if self._idle_timer:
+            self._idle_timer.cancel()
+            self._idle_timer = None
         async with self._browser_lock:
             if self.browser and not self.browser.is_connected():
                 logger.info("Browser disconnected, recreating")
@@ -883,6 +895,15 @@ class BrowserEngine:
             finally:
                 # Release the semaphore slot acquired by acquire_with_backpressure()
                 self._context_semaphore.release()
+                # Track crawl count and restart browser if threshold reached
+                self._crawl_count += 1
+                if self._crawl_count >= self._max_crawls_before_restart:
+                    logger.info(f"Browser restart after {self._crawl_count} crawls (memory management)")
+                    await self.close()
+                    self._crawl_count = 0
+                else:
+                    # Start idle countdown — browser will shut down if no new crawls arrive
+                    self._reset_idle_timer()
 
     async def navigate(self, url: str, javascript_enabled: bool = True, timeout: int = 30000) -> None:
         """Navigate to URL with enhanced error handling and retry logic."""
@@ -1049,7 +1070,33 @@ class BrowserEngine:
 
             except Exception as e:
                 logger.error(f"Error closing browser: {e}")
-    
+
+    def _reset_idle_timer(self):
+        """Reset the idle shutdown timer. Call after each crawl completes."""
+        if self._idle_timer:
+            self._idle_timer.cancel()
+            self._idle_timer = None
+        self._last_activity = asyncio.get_event_loop().time()
+        if self._idle_timeout_seconds > 0:
+            loop = asyncio.get_event_loop()
+            self._idle_timer = loop.call_later(
+                self._idle_timeout_seconds,
+                lambda: asyncio.ensure_future(self._idle_shutdown())
+            )
+
+    async def _idle_shutdown(self):
+        """Shutdown browser after idle timeout to free memory."""
+        # Double-check no crawls are in progress (semaphore slots in use)
+        available = self._context_semaphore._value
+        max_slots = settings.max_concurrent_crawls
+        if available < max_slots:
+            logger.info(f"Idle shutdown deferred — {max_slots - available} crawl(s) still active")
+            self._reset_idle_timer()
+            return
+        logger.info(f"Browser idle for {self._idle_timeout_seconds}s, shutting down to free memory")
+        await self.close()
+        self._crawl_count = 0
+
     async def _check_exit_ip(self):
         """Check and log the proxy exit IP address.
 
