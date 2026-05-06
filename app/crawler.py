@@ -957,8 +957,10 @@ async def get_crawler_engine(user_email: Optional[str] = None) -> CrawlerEngine:
     return _crawler_instances[key]
 
 async def cleanup_all_crawlers():
-    """Cleanup all crawler instances."""
+    """Cleanup all crawler instances and force GC to reclaim memory."""
     for crawler in _crawler_instances.values():
         await crawler.cleanup()
     _crawler_instances.clear()
-    logger.info("All crawlers cleaned up")
+    import gc
+    gc.collect()
+    logger.info(f"All crawlers cleaned up and GC forced")

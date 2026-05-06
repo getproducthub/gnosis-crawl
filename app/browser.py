@@ -1066,6 +1066,10 @@ class BrowserEngine:
                     await self.playwright.stop()
                     self.playwright = None
 
+                # Clear per-domain locks — they're tied to this browser session
+                # and accumulate unbounded across crawl cycles.
+                self._domain_locks.clear()
+
                 logger.info("Browser closed successfully")
 
             except Exception as e:
@@ -1096,6 +1100,25 @@ class BrowserEngine:
         logger.info(f"Browser idle for {self._idle_timeout_seconds}s, shutting down to free memory")
         await self.close()
         self._crawl_count = 0
+
+        # Clear Python-side caches that retain crawl artifacts in memory.
+        # Without this, each crawl cycle leaves ~200MB that never gets freed.
+        try:
+            from app.crawler import cleanup_all_crawlers
+            await cleanup_all_crawlers()
+        except Exception as e:
+            logger.warning(f"Failed to cleanup crawler instances: {e}")
+
+        try:
+            from app.cookie_store import get_cookie_store
+            get_cookie_store().clear_expired()
+        except Exception as e:
+            logger.warning(f"Failed to prune cookie store: {e}")
+
+        # Force GC to help CPython release memory pages back to the OS
+        import gc
+        gc.collect()
+        logger.info("Post-shutdown cleanup complete (crawlers, cookies, GC)")
 
     async def _check_exit_ip(self):
         """Check and log the proxy exit IP address.
