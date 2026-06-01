@@ -39,8 +39,8 @@ RUN playwright install --with-deps chromium
 # Install Patchright browser (stealth Chromium fork)
 RUN patchright install chromium || true
 
-# Fetch Camoufox browser binary
-RUN python -m camoufox fetch
+# Fetch Camoufox browser binary (retry up to 3 times — download is ~713MB and flaky)
+RUN for i in 1 2 3; do python -m camoufox fetch && break || { echo "Camoufox fetch attempt $i failed, retrying..."; sleep 5; }; done
 
 # Build and install grub_md Rust native extension
 COPY grub_md/ ./grub_md/
@@ -60,7 +60,7 @@ RUN mkdir -p storage && chown -R app:app storage
 # Fetch camoufox as root (needs write access to system packages for GeoLite2
 # MMDB), but redirect HOME so the 707MB browser binary caches into
 # /home/app/.cache/camoufox/ instead of /root/.cache/ (inaccessible at runtime).
-RUN HOME=/home/app python -m camoufox fetch \
+RUN for i in 1 2 3; do HOME=/home/app python -m camoufox fetch && break || { echo "Camoufox fetch attempt $i failed, retrying..."; sleep 5; }; done \
     && chown -R app:app /home/app/.cache
 
 # Switch to non-root user for runtime
