@@ -395,11 +395,24 @@ class BrowserEngine:
     
     async def _ensure_browser_alive(self, javascript_enabled: bool = True) -> None:
         """Ensure the browser process is alive, restarting if it crashed or disconnected."""
-        if not self.browser or not self.browser.is_connected():
-            if self.browser:
-                logger.warning("Browser process died (is_connected=False), restarting")
-            else:
-                logger.info("Browser not started, initializing")
+        needs_restart = False
+
+        if not self.browser:
+            logger.info("Browser not started, initializing")
+            needs_restart = True
+        elif not self.browser.is_connected():
+            logger.warning("Browser process died (is_connected=False), restarting")
+            needs_restart = True
+        else:
+            # Probe the transport — is_connected() can return True even when
+            # the underlying Unix socket is dead (WriteUnixTransport closed=True).
+            try:
+                _ = self.browser.contexts  # lightweight property access that touches the channel
+            except Exception:
+                logger.warning("Browser transport dead (property access failed), restarting")
+                needs_restart = True
+
+        if needs_restart:
             await self.close()
             await self.start_browser(javascript_enabled=javascript_enabled)
 
@@ -422,11 +435,22 @@ class BrowserEngine:
                     domain=domain,
                     proxy_server=proxy_server,
                 )
-            except TargetClosedError:
+            except (TargetClosedError, RuntimeError) as exc:
+                # TargetClosedError: browser process exited
+                # RuntimeError with "handler is closed" / "closed=True":
+                #   Playwright's Unix transport died (OOM kill, SIGKILL, etc.)
+                is_transport_dead = isinstance(exc, RuntimeError) and (
+                    "handler is closed" in str(exc)
+                    or "closed=True" in str(exc)
+                    or "Connection closed" in str(exc)
+                )
+                if isinstance(exc, RuntimeError) and not is_transport_dead:
+                    raise  # Unrelated RuntimeError — don't swallow
+
                 if attempt < max_crash_retries:
                     backoff = (attempt + 1) * 2  # 2s, 4s, 6s
                     logger.warning(
-                        f"Browser died during context creation (TargetClosedError), "
+                        f"Browser died during context creation ({type(exc).__name__}), "
                         f"restart attempt {attempt + 1}/{max_crash_retries}, "
                         f"waiting {backoff}s before retry"
                     )
