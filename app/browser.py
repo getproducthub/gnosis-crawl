@@ -23,7 +23,6 @@ from io import BytesIO
 
 from app.config import settings
 from app.stealth import apply_chromium_js_patches
-from app.exceptions import QueueOverflowError
 
 logger = logging.getLogger(__name__)
 
@@ -254,10 +253,8 @@ class BrowserEngine:
         self._browser_lock = asyncio.Lock()
         self._camoufox_cm = None
         self._context_semaphore = asyncio.Semaphore(settings.max_concurrent_crawls)
-        # Backpressure: track how many requests are waiting for a semaphore slot.
-        # If this exceeds the limit, new requests are rejected with 429.
+        # Track how many requests are waiting for a semaphore slot (observability).
         self._semaphore_waiters = 0
-        self._max_crawl_queue_depth = int(os.environ.get('MAX_CRAWL_QUEUE_DEPTH', '20'))
         # Serialize context creation for Camoufox + residential proxy:
         # concurrent proxy auth handshakes cause HTTP 407 rejections.
         self._context_create_lock = asyncio.Lock()
@@ -281,18 +278,15 @@ class BrowserEngine:
         self._max_crawls_before_restart = int(os.environ.get('BROWSER_MAX_CRAWLS', '50'))
         
     async def acquire_with_backpressure(self):
-        """Acquire a semaphore slot, rejecting if queue depth exceeds limit.
+        """Acquire a semaphore slot, waiting until one is available.
 
-        Raises QueueOverflowError immediately if too many requests are
-        already waiting, allowing the route handler to return HTTP 429
-        instead of letting requests pile up and timeout.
+        All requests are queued — none are rejected. The semaphore limits
+        concurrent browser contexts so memory stays bounded. Callers wait
+        in FIFO order until a slot frees up.
         """
-        if self._semaphore_waiters >= self._max_crawl_queue_depth:
-            raise QueueOverflowError(
-                f"Crawl queue depth ({self._semaphore_waiters}) "
-                f"exceeds limit ({self._max_crawl_queue_depth})"
-            )
         self._semaphore_waiters += 1
+        if self._semaphore_waiters > settings.max_concurrent_crawls:
+            logger.info(f"Crawl queue depth: {self._semaphore_waiters} waiting")
         try:
             await self._context_semaphore.acquire()
         except BaseException:
@@ -566,7 +560,7 @@ class BrowserEngine:
         deadline = (_time.monotonic() + client_timeout_seconds) if client_timeout_seconds else None
 
         # Backpressure check: reject early if too many requests are queued
-        # (raises QueueOverflowError → caller returns HTTP 429)
+        # Wait for a browser context slot (no rejection — all URLs get crawled)
         await self.acquire_with_backpressure()
 
         async with domain_lock:
